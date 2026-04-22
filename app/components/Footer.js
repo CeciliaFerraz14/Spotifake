@@ -18,7 +18,7 @@ export default function Footer() {
 ];
     return (
         
-        <div className="bg-[#1CF094] px-6 md:px-16 lg:px-24 xl:px-32">
+        <div className="bg-[#1CF094]/70 backdrop-blur-md px-6 md:px-16 lg:px-24 xl:px-32">
             <div className="flex flex-col md:flex-row items-start justify-between gap-10 py-10 border-b border-gray-500/30 text-gray-500">
                 <div>
                     <img className="w-34 md:w-32" src="/images/logo.png" alt="dummyLogoColored" />

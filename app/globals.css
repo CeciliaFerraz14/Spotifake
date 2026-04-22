@@ -33,4 +33,66 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ── Tom Nook watermark section ── */
+.nook-bg {
+  position: relative;
+  background-color: #D4EDE4;
+}
+
+.nook-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/tom-nook-watermark.svg');
+  background-size: 110px 110px;
+  background-repeat: repeat;
+  opacity: 0.10;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.nook-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Album card lift animation ── */
+@keyframes liftCard {
+  0%   { transform: scale(1);    box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  50%  { transform: scale(1.07); box-shadow: 0 18px 44px rgba(0,0,0,0.24); }
+  100% { transform: scale(1.05); box-shadow: 0 22px 52px rgba(0,0,0,0.15); }
+}
+
+.album-card {
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.album-card:hover {
+  animation: liftCard 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.album-img-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 15px;
+}
+
+/* glow overlay on hover */
+.album-img-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.album-card:hover .album-img-wrap::after {
+  opacity: 1;
+}
+
 
