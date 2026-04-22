@@ -4,19 +4,19 @@ import Link from "next/link";
 export default function Navbar() {
   return (
     
-    <nav className="w-full bg-[#85f4a8] text-white shadow-md">
+    <nav className="w-full bg-[#1CF094] text-white shadow-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           
         
           <div className="flex-shrink-0">
-            <Link href="/inicio" className="text-xl font-bold text-gray-800">
+            <Link href="/" className="text-xl font-bold text-gray-800">
               Ceci, Jess, Isa
             </Link>
           </div>
         <div className="hidden lg:flex flex-1 justify-center">
           <div className="hidden lg:flex items-center space-x-4">
-            <Link href="/inicio" className="rounded-md bg-black/10 px-3 py-2 text-sm font-medium text-gray-900">
+            <Link href="/" className="rounded-md bg-black/10 px-3 py-2 text-sm font-medium text-gray-900">
               Inicio
             </Link>
             <Link href="/usuario" className="rounded-md px-3 py-2 text-sm font-medium text-gray-800 hover:bg-black/10">
@@ -38,7 +38,7 @@ export default function Navbar() {
                 placeholder="Buscar..." 
                 className="w-full h-full outline-none text-sm text-gray-500 bg-transparent placeholder-gray-400 pr-2" 
               />
-              <button type="submit" className="bg-indigo-500 px-4 h-full text-sm text-white hover:bg-indigo-600 transition">
+              <button type="submit" className="bg-[#7d5a50] px-4 h-full text-sm text-white hover:opacity-90 transition">
                 Search
               </button>
             </form>
