@@ -116,6 +116,16 @@ const css = `
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
+  @keyframes orbit-label {
+    from { transform: rotate(0deg)   translateX(60px) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+  }
+  @keyframes slide-up-bounce {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(40px); }
+    65%  { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+    82%  { transform: translateX(-50%) translateY(5px); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
 `;
 
 /*
@@ -165,6 +175,36 @@ function VinylSection() {
     return () => { io.disconnect(); clearAll(); };
   }, []);
 
+  const [countOyentes, setCountOyentes]   = useState(0);
+  const [countArtistas, setCountArtistas] = useState(0);
+  const [greenKey, setGreenKey]           = useState(0);
+  const [lilacKey, setLilacKey]           = useState(0);
+
+  useEffect(() => {
+    if (step === 1) {
+      setGreenKey(k => k + 1);
+      setCountOyentes(0);
+      let n = 0;
+      const id = setInterval(() => {
+        n = Math.min(n + 5, 500);
+        setCountOyentes(n);
+        if (n >= 500) clearInterval(id);
+      }, 30);
+      return () => clearInterval(id);
+    }
+    if (step === 5) {
+      setLilacKey(k => k + 1);
+      setCountArtistas(0);
+      let n = 0;
+      const id = setInterval(() => {
+        n = Math.min(n + 1, 100);
+        setCountArtistas(n);
+        if (n >= 100) clearInterval(id);
+      }, 25);
+      return () => clearInterval(id);
+    }
+  }, [step]);
+
   /* ── Telón verde ── */
   const curtainX =
     step <= 2               ? "translateX(0)"
@@ -181,8 +221,8 @@ function VinylSection() {
   const vinylX =
     step === 0 || step === 7     ? "translate(-50%,  100%)"
     : step === 1 || step === 2   ? "translate(-50%,  50%)"
-    : step === 3                 ? "translate(calc(-50% - 62vw), 50%)"
-    : step === 4                 ? "translate(calc(-50% + 62vw), 100%)" // derecha, oculto
+    : step === 3                 ? "translate(calc(-50% - 110vw), 50%)"
+    : step === 4                 ? "translate(calc(-50% + 110vw), 100%)" // derecha, oculto
     : /* step 5-6 */               "translate(-50%,  50%)";
 
   const vinylTr =
@@ -238,14 +278,42 @@ function VinylSection() {
 
   return (
     <div
+      id="for-listeners"
       ref={sectionRef}
       style={{ minHeight: "100vh", background: "#d4b8f0", position: "relative", overflow: "hidden" }}
     >
       {/* "for artists" — debajo del telón, se revela cuando el telón se va */}
-      <h2 style={{ ...headingBase, color: "#3d1a6b", zIndex: 2,
-        opacity: onLilac ? 1 : 0, transition: "opacity 0.9s ease 0.4s" }}>
-        for artists
+      <h2
+        key={lilacKey}
+        style={{ ...headingBase, color: "#3d1a6b", zIndex: 2,
+          opacity: 0,
+          animation: onLilac ? "slide-up-bounce 0.9s cubic-bezier(0.34,1.56,0.64,1) both" : "none",
+        }}
+      >
+        Más de {countArtistas} artistas
       </h2>
+
+      {/* Texto de fondo "ARTISTAS" en el área lila */}
+      <div style={{
+        position: "absolute",
+        bottom: "-4.2vw",
+        left: "50%",
+        transform: "translateX(-50%) scaleX(0.70)",
+        transformOrigin: "center bottom",
+        fontSize: "28vw",
+        fontWeight: 900,
+        color: "#3d1a6b",
+        opacity: 0.12,
+        whiteSpace: "nowrap",
+        fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
+        letterSpacing: "2px",
+        pointerEvents: "none",
+        userSelect: "none",
+        lineHeight: 1,
+        zIndex: 1,
+      }}>
+        ARTISTAS
+      </div>
 
       {/* ── Telón verde ── */}
       <div style={{
@@ -256,9 +324,36 @@ function VinylSection() {
         zIndex: 3,
       }}>
         {/* "for listeners" viaja dentro del telón */}
-        <h2 style={{ ...headingBase, color: "#0d3d25", zIndex: 1 }}>
-          for listeners
+        <h2
+          key={greenKey}
+          style={{ ...headingBase, color: "#0d3d25", zIndex: 1,
+            opacity: 0,
+            animation: greenKey > 0 ? "slide-up-bounce 0.9s cubic-bezier(0.34,1.56,0.64,1) both" : "none",
+          }}
+        >
+          Más de {countOyentes} oyentes diarios
         </h2>
+
+        {/* Texto de fondo "OYENTES" — detrás del vinilo */}
+        <div style={{
+          position: "absolute",
+          bottom: "-4.5vw",
+          left: "50%",
+          transform: "translateX(-50%) scaleX(0.75)",
+          transformOrigin: "center bottom",
+          fontSize: "28vw",
+          fontWeight: 900,
+          color: "#0d3d25",
+          opacity: 0.12,
+          whiteSpace: "nowrap",
+          fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
+          letterSpacing: "2px",
+          pointerEvents: "none",
+          userSelect: "none",
+          lineHeight: 1,
+        }}>
+          OYENTES
+        </div>
       </div>
 
       {/* ── Vinilo (siempre encima del telón) ── */}
@@ -276,16 +371,315 @@ function VinylSection() {
             background: onLilac ? "#9f7aea" : "#1CF094",
             transition: "background 0.8s ease",
             boxShadow: "0 2px 18px rgba(0,0,0,0.55)",
-            display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 2,
           }}>
+            {/* Punto central fijo */}
             <div style={{
+              position: "absolute", top: "50%", left: "50%",
+              transform: "translate(-50%, -50%)",
               width: "28px", height: "28px", borderRadius: "50%",
               background: "#0a0a0a", boxShadow: "inset 0 1px 4px rgba(0,0,0,0.9)",
+              zIndex: 3,
             }} />
+            {/* Hojita orbitando alrededor del punto */}
+            <img
+              src="/images/hojita.png"
+              alt=""
+              style={{
+                position: "absolute",
+                top: "calc(50% - 28px)",
+                left: "calc(50% + 32px)",
+                width: "56px", height: "56px",
+                objectFit: "contain",
+                transformOrigin: "-32px 28px",
+                animation: "spin-vinyl 2.5s linear infinite",
+                mixBlendMode: "multiply",
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const NEON = "#a3ff47";
+
+const playlists = [
+  { name: "NIGHT DRIVE",  genre: "Synthwave · Lo-fi",   songs: 32, accent: "#6e2fff", bg: "linear-gradient(135deg,#0d0020 0%,#1a0040 100%)" },
+  { name: "RAGE MODE",    genre: "Hip-hop · Trap",       songs: 47, accent: "#ff3c3c", bg: "linear-gradient(135deg,#200000 0%,#3a0505 100%)" },
+  { name: "CHILL WAVE",   genre: "Indie · Ambient",      songs: 28, accent: "#00d4ff", bg: "linear-gradient(135deg,#001520 0%,#002a3a 100%)" },
+  { name: "EUPHORIA",     genre: "Pop · Dance",          songs: 55, accent: "#ff6ef7", bg: "linear-gradient(135deg,#1a0020 0%,#35003a 100%)" },
+  { name: "DARK MATTER",  genre: "Electronic · DnB",     songs: 41, accent: NEON,      bg: "linear-gradient(135deg,#001a00 0%,#003a0a 100%)" },
+  { name: "SOLAR FLARE",  genre: "Rock · Psych",         songs: 36, accent: "#ff9a00", bg: "linear-gradient(135deg,#1a0800 0%,#3a1800 100%)" },
+  { name: "VOID WALKER",  genre: "Industrial · Metal",   songs: 23, accent: "#c060ff", bg: "linear-gradient(135deg,#100015 0%,#220030 100%)" },
+  { name: "NEON TOKYO",   genre: "J-Pop · Future Bass",  songs: 38, accent: "#ff0080", bg: "linear-gradient(135deg,#1a0010 0%,#35002a 100%)" },
+  { name: "DEEP SEA",     genre: "Ambient · Drone",      songs: 19, accent: "#00ffcc", bg: "linear-gradient(135deg,#001510 0%,#002820 100%)" },
+  { name: "BROKEN BEAT",  genre: "Jazz · Neo-Soul",      songs: 44, accent: "#ffcc00", bg: "linear-gradient(135deg,#1a1400 0%,#2e2200 100%)" },
+];
+
+const carouselCss = `
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(70px) scale(0.85); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes active-glow-pulse {
+  0%,100% { box-shadow: 0 0 0 2px ${NEON}, 0 0 28px rgba(163,255,71,.45), 0 24px 60px rgba(0,0,0,.85); }
+  50%     { box-shadow: 0 0 0 2px #d4ff70, 0 0 52px rgba(163,255,71,.75), 0 24px 60px rgba(0,0,0,.85); }
+}
+@keyframes halo-breathe {
+  0%,100% { opacity:.55; transform: translateX(-50%) scaleX(1);   }
+  50%     { opacity:.85; transform: translateX(-50%) scaleX(1.12); }
+}
+@keyframes hover-label {
+  from { opacity:0; transform:translateY(6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes track-from-right {
+  from { transform: translateX(55px); }
+  to   { transform: translateX(0); }
+}
+@keyframes track-from-left {
+  from { transform: translateX(-55px); }
+  to   { transform: translateX(0); }
+}
+.pl-card {
+  position: absolute;
+  width: 220px; height: 300px;
+  border-radius: 18px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform .55s cubic-bezier(.25,.46,.45,.94),
+              opacity  .55s cubic-bezier(.25,.46,.45,.94),
+              box-shadow .3s ease;
+  user-select: none;
+  touch-action: pan-y;
+}
+.pl-card:hover .pl-label { animation: hover-label .25s ease forwards; }
+.pl-card:hover { filter: brightness(1.15); }
+.pl-card.active { animation: active-glow-pulse 2.5s ease-in-out infinite; }
+
+.pl-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 48px 18px 18px;
+  background: linear-gradient(to top, rgba(0,0,0,.92) 0%, transparent 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.pl-card.active .pl-label { opacity: 1; animation: none; }
+
+.carousel-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(163,255,71,.25);
+  color: ${NEON}; font-size: 1.3rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 30;
+  transition: background .2s, border-color .2s, box-shadow .2s;
+}
+.carousel-arrow:hover {
+  background: rgba(163,255,71,.15);
+  border-color: ${NEON};
+  box-shadow: 0 0 16px rgba(163,255,71,.4);
+}
+
+`;
+
+function PlaylistCarouselSection() {
+  const [active, setActive] = useState(4);
+  const [entered, setEntered] = useState(false);
+  const [slideAnim, setSlideAnim] = useState<{ key: number; dir: "left" | "right" }>({ key: 0, dir: "left" });
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const dragStartX = useRef<number | null>(null);
+  const dragMoved  = useRef(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setEntered(true); io.disconnect(); }
+    }, { threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const prev = () => {
+    setActive(a => Math.max(0, a - 1));
+    setSlideAnim(s => ({ key: s.key + 1, dir: "right" }));
+  };
+  const next = () => {
+    setActive(a => Math.min(playlists.length - 1, a + 1));
+    setSlideAnim(s => ({ key: s.key + 1, dir: "left" }));
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+    dragMoved.current = false;
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    if (Math.abs(e.clientX - dragStartX.current) > 8) dragMoved.current = true;
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    const delta = e.clientX - dragStartX.current;
+    if (Math.abs(delta) > 40) { delta < 0 ? next() : prev(); }
+    dragStartX.current = null;
+  };
+
+  return (
+    <div
+      id="join"
+      ref={sectionRef}
+      style={{ background: "#000", minHeight: "100vh", position: "relative", overflow: "hidden",
+        display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: "100px" }}
+    >
+      <style>{carouselCss}</style>
+
+      {/* Scanline texture overlay */}
+      <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.015) 2px,rgba(255,255,255,.015) 4px)", pointerEvents:"none", zIndex:1 }} />
+
+      {/* Header */}
+      <div style={{ textAlign:"center", paddingTop:"90px", marginBottom:"20px", zIndex:5, position:"relative" }}>
+        <p style={{ color:"rgba(163,255,71,.7)", fontFamily:"var(--font-anton),'Anton',sans-serif",
+          letterSpacing:"5px", fontSize:".8rem", margin:"0 0 10px", textTransform:"uppercase" }}>
+          Tu música. Tu mundo.
+        </p>
+        <h2 style={{ fontFamily:"var(--font-anton),'Anton',sans-serif", fontSize:"clamp(3rem,7vw,5.5rem)",
+          color:"#fff", margin:0, letterSpacing:"2px", lineHeight:1,
+          textShadow:`0 0 40px rgba(163,255,71,.3)` }}>
+          RADAR DE NOVEDADES
+        </h2>
+        <div style={{ height:"3px", width:"80px", background:NEON, margin:"18px auto 0",
+          boxShadow:`0 0 16px ${NEON}` }} />
+      </div>
+
+      {/* Carousel viewport */}
+      <div
+        style={{ position:"relative", width:"100%", maxWidth:"1200px", height:"380px",
+          perspective:"1200px", margin:"30px 0 40px", zIndex:5, cursor:"grab" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+      >
+        {/* Green orbit halo */}
+        <div className="halo-breathe" style={{
+          position:"absolute", bottom:"-30px", left:"50%",
+          width:"620px", height:"60px",
+          background:`radial-gradient(ellipse at center, rgba(163,255,71,.22) 0%, transparent 70%)`,
+          animation: entered ? "halo-breathe 3s ease-in-out infinite" : "none",
+          pointerEvents:"none", zIndex:0,
+        }} />
+
+        {/* Arrow left */}
+        <button className="carousel-arrow" style={{ left:"0px" }} onClick={prev} aria-label="anterior">
+          ‹
+        </button>
+
+        {/* Cards */}
+        <div
+          key={slideAnim.key}
+          style={{
+            position: "absolute", inset: 0,
+            animation: slideAnim.key > 0
+              ? `${slideAnim.dir === "left" ? "track-from-right" : "track-from-left"} .48s cubic-bezier(.25,.46,.45,.94) both`
+              : "none",
+          }}
+        >
+        {playlists.map((pl, idx) => {
+          const offset = idx - active;
+          const absOff = Math.abs(offset);
+          if (absOff > 4) return null;
+
+          const translateX = offset * 145;
+          const rotateY    = offset * -28;
+          const scaleMap: Record<number, number> = { 0: 1, 1: 0.84, 2: 0.70, 3: 0.58, 4: 0.48 };
+          const scale      = scaleMap[absOff] ?? 0.48;
+          const zIndex     = 20 - absOff;
+          const opacity    = absOff === 4 ? 0.35 : 1 - absOff * 0.14;
+          const isActive   = offset === 0;
+
+          return (
+            <div
+              key={pl.name}
+              className={`pl-card${isActive ? " active" : ""}`}
+              onClick={() => { if (!dragMoved.current) setActive(idx); }}
+              style={{
+                background: "#0a0a0a",
+                left: "50%",
+                top:  "50%",
+                marginLeft: "-110px",
+                marginTop:  "-150px",
+                transform: `translateX(${translateX}px) rotateY(${rotateY}deg) scale(${scale})`,
+                opacity,
+                zIndex,
+                animationDelay: entered ? `${idx * 0.08}s` : "0s",
+                animation: entered
+                  ? `card-enter .7s cubic-bezier(.34,1.56,.64,1) ${idx * 0.08}s both${isActive ? ", active-glow-pulse 2.5s 1s ease-in-out infinite" : ""}`
+                  : "none",
+              }}
+            >
+              {/* Portada */}
+              <img
+                src={innerImages[idx % innerImages.length]}
+                alt={pl.name}
+                style={{ position:"absolute", inset:0, width:"100%", height:"100%",
+                  objectFit:"cover", display:"block", pointerEvents:"none" }}
+              />
+
+              {/* Scrim oscuro sobre la imagen */}
+              <div style={{ position:"absolute", inset:0,
+                background:"linear-gradient(to bottom, rgba(0,0,0,.25) 0%, rgba(0,0,0,.1) 40%, rgba(0,0,0,.75) 100%)",
+                pointerEvents:"none" }} />
+
+              {/* Accent bar */}
+              <div style={{ position:"absolute", top:0, left:0, right:0, height:"4px",
+                background:pl.accent, boxShadow:`0 0 16px ${pl.accent}`, zIndex:2 }} />
+
+              {/* Song count badge */}
+              <div style={{ position:"absolute", top:"18px", right:"16px",
+                background:"rgba(0,0,0,.65)", border:`1px solid ${pl.accent}55`,
+                borderRadius:"20px", padding:"3px 10px",
+                color:pl.accent, fontSize:".7rem", fontFamily:"Arial, sans-serif",
+                letterSpacing:"1px", zIndex:2 }}>
+                {pl.songs} tracks
+              </div>
+
+              {/* Label */}
+              <div className="pl-label" style={{ zIndex:2 }}>
+                <p style={{ margin:"0 0 4px", fontFamily:"var(--font-anton),'Anton',sans-serif",
+                  fontSize:"1.1rem", color:"#fff", letterSpacing:"2px" }}>{pl.name}</p>
+                <p style={{ margin:0, fontSize:".75rem", color:"rgba(255,255,255,.65)",
+                  fontFamily:"Arial,sans-serif" }}>{pl.genre}</p>
+              </div>
+            </div>
+          );
+        })}
+        </div>
+
+        {/* Arrow right */}
+        <button className="carousel-arrow" style={{ right:"0px" }} onClick={next} aria-label="siguiente">
+          ›
+        </button>
+      </div>
+
+      {/* Dots */}
+      <div style={{ display:"flex", gap:"8px", zIndex:5, position:"relative", marginBottom:"60px" }}>
+        {playlists.map((_, i) => (
+          <button key={i} onClick={() => setActive(i)} style={{
+            width: i === active ? "24px" : "8px", height:"8px",
+            borderRadius:"4px", border:"none", cursor:"pointer",
+            background: i === active ? NEON : "rgba(255,255,255,.2)",
+            boxShadow: i === active ? `0 0 10px ${NEON}` : "none",
+            transition:"all .3s ease", padding:0,
+          }} />
+        ))}
+      </div>
+
     </div>
   );
 }
@@ -459,9 +853,39 @@ export default function IntroPage() {
           </div>
 
         </div>
+
+        {/* Botón scroll hacia "for listeners" */}
+        <a
+          href="#for-listeners"
+          style={{
+            position: "absolute",
+            bottom: "32px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "6px",
+            color: "rgba(255,255,255,0.5)",
+            textDecoration: "none",
+            fontSize: "0.75rem",
+            letterSpacing: "1.5px",
+            fontFamily: "Arial, sans-serif",
+            animation: "float-y 2.5s ease-in-out infinite",
+            zIndex: 20,
+          }}
+        >
+          <span style={{ textTransform: "uppercase" }}>for listeners</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12l7 7 7-7"/>
+          </svg>
+        </a>
       </div>
 
       <VinylSection />
+      <PlaylistCarouselSection />
     </>
   );
 }
+
+
