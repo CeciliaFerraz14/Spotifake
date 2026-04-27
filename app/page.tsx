@@ -1124,10 +1124,10 @@ export default function IntroPage() {
             }}
           >
             <img
-              src="/images/logo.png"
+              src="/images/logo.jpeg"
               alt="SpotiFake"
               className="center-logo"
-              style={{ width: "110px", height: "110px", objectFit: "contain" }}
+              style={{ width: "110px", height: "110px", objectFit: "cover" }}
             />
             <div className="center-text">
               <h1 style={{

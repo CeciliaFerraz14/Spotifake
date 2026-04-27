@@ -4,6 +4,8 @@ import Script from "next/script";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import MusicPlayer from "./components/MusicPlayer";
+import { PlayerProvider } from "./context/PlayerContext";
 
 
 const geistSans = Geist({
@@ -44,9 +46,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${anton.variable} antialiased`}
       >
         <Script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" strategy="beforeInteractive" />
-        <Navbar />
-        <main>{children}</main>  
-        <Footer />
+        <PlayerProvider>
+          <Navbar />
+          <main style={{ paddingBottom: "72px" }}>{children}</main>
+          <Footer />
+          <MusicPlayer />
+        </PlayerProvider>
       </body>
     </html>
   );
