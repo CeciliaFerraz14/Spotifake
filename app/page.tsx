@@ -425,6 +425,14 @@ const carouselCss = `
   from { opacity: 0; transform: translateY(70px) scale(0.85); }
   to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
+@keyframes card-tri-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes listen-btn-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.92); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
 @keyframes active-glow-pulse {
   0%,100% { box-shadow: 0 0 0 2px ${NEON}, 0 0 28px rgba(163,255,71,.45), 0 24px 60px rgba(0,0,0,.85); }
   50%     { box-shadow: 0 0 0 2px #d4ff70, 0 0 52px rgba(163,255,71,.75), 0 24px 60px rgba(0,0,0,.85); }
@@ -506,12 +514,13 @@ function PlaylistCarouselSection() {
     return () => io.disconnect();
   }, []);
 
+  const n = playlists.length;
   const prev = () => {
-    setActive(a => Math.max(0, a - 1));
+    setActive(a => (a - 1 + n) % n);
     setSlideAnim(s => ({ key: s.key + 1, dir: "right" }));
   };
   const next = () => {
-    setActive(a => Math.min(playlists.length - 1, a + 1));
+    setActive(a => (a + 1) % n);
     setSlideAnim(s => ({ key: s.key + 1, dir: "left" }));
   };
 
@@ -559,7 +568,7 @@ function PlaylistCarouselSection() {
 
       {/* Carousel viewport */}
       <div
-        style={{ position:"relative", width:"100%", maxWidth:"1200px", height:"380px",
+        style={{ position:"relative", width:"100%", maxWidth:"1200px", height:"440px",
           perspective:"1200px", margin:"30px 0 40px", zIndex:5, cursor:"grab" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -575,11 +584,6 @@ function PlaylistCarouselSection() {
           pointerEvents:"none", zIndex:0,
         }} />
 
-        {/* Arrow left */}
-        <button className="carousel-arrow" style={{ left:"0px" }} onClick={prev} aria-label="anterior">
-          ‹
-        </button>
-
         {/* Cards */}
         <div
           key={slideAnim.key}
@@ -591,16 +595,18 @@ function PlaylistCarouselSection() {
           }}
         >
         {playlists.map((pl, idx) => {
-          const offset = idx - active;
+          let offset = idx - active;
+          if (offset > n / 2)  offset -= n;
+          if (offset < -n / 2) offset += n;
           const absOff = Math.abs(offset);
-          if (absOff > 4) return null;
+          if (absOff > 1) return null;
 
-          const translateX = offset * 145;
-          const rotateY    = offset * -28;
-          const scaleMap: Record<number, number> = { 0: 1, 1: 0.84, 2: 0.70, 3: 0.58, 4: 0.48 };
-          const scale      = scaleMap[absOff] ?? 0.48;
-          const zIndex     = 20 - absOff;
-          const opacity    = absOff === 4 ? 0.35 : 1 - absOff * 0.14;
+          const translateX = offset * 248;
+          const translateY = absOff === 0 ? -50 : 45;
+          const rotateY    = offset * -16;
+          const scale      = absOff === 0 ? 1.06 : 0.80;
+          const zIndex     = absOff === 0 ? 20 : 10;
+          const opacity    = absOff === 0 ? 1 : 0.82;
           const isActive   = offset === 0;
 
           return (
@@ -614,13 +620,12 @@ function PlaylistCarouselSection() {
                 top:  "50%",
                 marginLeft: "-110px",
                 marginTop:  "-150px",
-                transform: `translateX(${translateX}px) rotateY(${rotateY}deg) scale(${scale})`,
+                transform: `translateX(${translateX}px) translateY(${translateY}px) rotateY(${rotateY}deg) scale(${scale})`,
                 opacity,
                 zIndex,
-                animationDelay: entered ? `${idx * 0.08}s` : "0s",
-                animation: entered
-                  ? `card-enter .7s cubic-bezier(.34,1.56,.64,1) ${idx * 0.08}s both${isActive ? ", active-glow-pulse 2.5s 1s ease-in-out infinite" : ""}`
-                  : "none",
+                animation: (entered && slideAnim.key === 0)
+                  ? `card-tri-enter .6s ease ${absOff * 0.15}s backwards${isActive ? ", active-glow-pulse 2.5s .8s ease-in-out infinite" : ""}`
+                  : isActive ? "active-glow-pulse 2.5s ease-in-out infinite" : "none",
               }}
             >
               {/* Portada */}
@@ -661,10 +666,51 @@ function PlaylistCarouselSection() {
         })}
         </div>
 
-        {/* Arrow right */}
-        <button className="carousel-arrow" style={{ right:"0px" }} onClick={next} aria-label="siguiente">
-          ›
-        </button>
+        {/* Escuchar ahora */}
+        <div style={{
+          position: "absolute",
+          top: "calc(50% + 118px)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 25,
+        }}>
+          <button
+            key={active}
+            style={{
+              background: NEON,
+              color: "#050a00",
+              border: "none",
+              borderRadius: "50px",
+              padding: "11px 30px",
+              fontWeight: 800,
+              fontSize: ".88rem",
+              cursor: "pointer",
+              fontFamily: "var(--font-nunito),'Trebuchet MS',sans-serif",
+              letterSpacing: ".5px",
+              whiteSpace: "nowrap",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: `0 4px 22px ${NEON}55`,
+              animation: entered ? "listen-btn-in .45s cubic-bezier(.34,1.56,.64,1) both" : "none",
+              transition: "transform .2s, box-shadow .2s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 6px 32px ${NEON}88`;
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 4px 22px ${NEON}55`;
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5,3 19,12 5,21"/>
+            </svg>
+            Escuchar ahora
+          </button>
+        </div>
+
       </div>
 
       {/* Dots */}
@@ -680,6 +726,259 @@ function PlaylistCarouselSection() {
         ))}
       </div>
 
+    </div>
+  );
+}
+
+// ─── Reviews Section ─────────────────────────────────────────────────────────
+
+const reviewData = [
+  { name: "NightSurfer_88",  genre: "Synthwave",  rating: 5, quote: "Las recomendaciones son tan precisas que parece que SpotiFake me lee la mente.", accent: "#6e2fff" },
+  { name: "BassDropQueen",   genre: "Hip-hop",    rating: 5, quote: "Jamás pensé que encontraría tanta música underground en un solo lugar.", accent: "#ff3c3c" },
+  { name: "ChillVibesOnly",  genre: "Lo-fi",      rating: 4, quote: "El modo de estudio con lo-fi me ha salvado en tantos exámenes. Imprescindible.", accent: "#00d4ff" },
+  { name: "Euphoria.wav",    genre: "Pop",         rating: 5, quote: "Las playlists curadas son perfectas. No puedo dejar de escuchar.", accent: "#ff6ef7" },
+  { name: "DarkMatter.exe",  genre: "Electronic",  rating: 5, quote: "La calidad de audio es impecable. Noto cada detalle en la producción.", accent: "#a3ff47" },
+  { name: "SolarFlare",      genre: "Rock",        rating: 4, quote: "Encontré bandas que ni sabía que existían. Mi universo musical explotó.", accent: "#ff9a00" },
+  { name: "VoidWalker_XIII", genre: "Metal",       rating: 5, quote: "El único servicio que no me bombardea con pop mainstream. Por fin.", accent: "#c060ff" },
+  { name: "NeonTokyo_Girl",  genre: "J-Pop",       rating: 5, quote: "La sección de música asiática es increíble. Encuentro todo aquí.", accent: "#ff0080" },
+  { name: "DeepSea_Sound",   genre: "Ambient",     rating: 5, quote: "Perfecta para concentrarse. El modo offline es una maravilla añadida.", accent: "#00ffcc" },
+  { name: "BrokenBeat_Soul", genre: "Neo-Soul",    rating: 4, quote: "El diseño es hermoso y la experiencia fluye de manera muy natural.", accent: "#ffcc00" },
+];
+
+const reviewsCss = `
+@keyframes marquee-fwd {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marquee-rev {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+@keyframes spin-rv {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes eq-wave {
+  0%, 100% { transform: scaleY(0.15); opacity: 0.35; }
+  50%       { transform: scaleY(1);    opacity: 0.8; }
+}
+.rv-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: nowrap;
+  width: max-content;
+  padding: 10px 0;
+}
+.rv-row--fwd { animation: marquee-fwd 48s linear infinite; }
+.rv-row--rev { animation: marquee-rev 62s linear infinite; }
+.rv-row--fwd:hover,
+.rv-row--rev:hover {
+  animation-play-state: paused;
+}
+.rv-card {
+  flex-shrink: 0;
+  width: 300px;
+  border-radius: 16px;
+  padding: 18px 20px 14px;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.25s ease;
+  cursor: default;
+}
+.rv-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(255,255,255,0.2);
+}
+`;
+
+function ReviewsSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); io.disconnect(); }
+    }, { threshold: 0.1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const row2 = [...reviewData.slice(5), ...reviewData.slice(0, 5)];
+  const doubled1 = [...reviewData, ...reviewData];
+  const doubled2 = [...row2, ...row2];
+
+  const vinylBg = (accent: string) =>
+    `radial-gradient(circle, ${accent} 0%, ${accent} 18%, #0d0d0d 19%, #0d0d0d 24%, #1c1c1c 25%, #0d0d0d 27%, #1c1c1c 30%, #0d0d0d 33%, #1c1c1c 37%, #0d0d0d 41%, #1c1c1c 47%, #0d0d0d 52%, #1c1c1c 59%, #0d0d0d 64%, #1c1c1c 73%, #0d0d0d 78%, #1c1c1c 88%, #0d0d0d 93%, #111 100%)`;
+
+  const eqBars = Array.from({ length: 16 }, (_, i) => ({
+    delay:    `${(i * 0.1).toFixed(1)}s`,
+    duration: `${(0.5 + (i % 5) * 0.12).toFixed(2)}s`,
+    peakH:    12 + (i % 8) * 3,
+  }));
+
+  const renderCard = (r: typeof reviewData[0], idx: number) => (
+    <div
+      key={idx}
+      className="rv-card"
+      style={{ borderTop: `2px solid ${r.accent}` }}
+    >
+      {/* Top accent glow */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: "70px",
+        background: `linear-gradient(to bottom, ${r.accent}18, transparent)`,
+        pointerEvents: "none",
+      }} />
+
+      {/* Vinyl + name + stars */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px", position: "relative", zIndex: 1 }}>
+        <div style={{
+          width: "54px", height: "54px", borderRadius: "50%", flexShrink: 0,
+          animation: `spin-rv ${3.2 + (idx % reviewData.length) * 0.28}s linear infinite`,
+          background: vinylBg(r.accent),
+          boxShadow: `0 0 14px ${r.accent}55`,
+          position: "relative",
+        }}>
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%,-50%)",
+            width: "11px", height: "11px", borderRadius: "50%",
+            background: "#060612",
+          }} />
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            color: "#fff", fontWeight: 700,
+            fontFamily: "var(--font-nunito),'Trebuchet MS',sans-serif",
+            fontSize: ".88rem", whiteSpace: "nowrap",
+            overflow: "hidden", textOverflow: "ellipsis",
+          }}>{r.name}</div>
+          <div style={{
+            color: r.accent, fontSize: ".68rem",
+            fontFamily: "Arial,sans-serif",
+            letterSpacing: "1.5px", textTransform: "uppercase", marginTop: "2px",
+          }}>{r.genre}</div>
+        </div>
+
+        <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
+          {[1,2,3,4,5].map(s => (
+            <span key={s} style={{
+              fontSize: ".78rem",
+              color: s <= r.rating ? r.accent : "rgba(255,255,255,0.1)",
+              textShadow: s <= r.rating ? `0 0 8px ${r.accent}` : "none",
+            }}>★</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Quote */}
+      <p style={{
+        color: "rgba(255,255,255,0.7)",
+        fontSize: ".82rem", lineHeight: 1.55,
+        margin: "0 0 14px",
+        fontStyle: "italic",
+        fontFamily: "Arial,sans-serif",
+        position: "relative", zIndex: 1,
+      }}>
+        &ldquo;{r.quote}&rdquo;
+      </p>
+
+      {/* Equalizer bars */}
+      <div style={{
+        display: "flex", alignItems: "flex-end", gap: "2px", height: "26px",
+        position: "relative", zIndex: 1,
+      }}>
+        {eqBars.map((bar, bi) => (
+          <div key={bi} style={{
+            flex: 1, height: `${bar.peakH}px`,
+            background: `linear-gradient(to top, ${r.accent}, ${r.accent}44)`,
+            borderRadius: "2px 2px 0 0",
+            transformOrigin: "bottom",
+            animation: `eq-wave ${bar.duration} ${bar.delay} ease-in-out infinite`,
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      ref={sectionRef}
+      style={{ background: "#080812", overflow: "hidden", paddingBottom: "80px", position: "relative" }}
+    >
+      <style>{reviewsCss}</style>
+
+      {/* Radial glow behind title */}
+      <div style={{
+        position: "absolute", top: 0, left: "50%",
+        transform: "translateX(-50%)",
+        width: "900px", height: "500px",
+        background: "radial-gradient(ellipse at center top, rgba(28,240,148,0.07) 0%, transparent 65%)",
+        pointerEvents: "none",
+      }} />
+
+      {/* Section header */}
+      <div style={{
+        textAlign: "center",
+        padding: "90px 20px 50px",
+        position: "relative", zIndex: 2,
+        opacity: visible ? 1 : 0,
+        transform: visible ? "none" : "translateY(30px)",
+        transition: "opacity 0.8s ease, transform 0.8s ease",
+      }}>
+        <p style={{
+          color: "#1CF094",
+          fontFamily: "var(--font-anton),'Anton',sans-serif",
+          letterSpacing: "5px", fontSize: ".75rem",
+          margin: "0 0 14px", textTransform: "uppercase",
+        }}>
+          ★ Más de 500 reseñas verificadas ★
+        </p>
+        <h2 style={{
+          fontFamily: "var(--font-anton),'Anton',sans-serif",
+          fontSize: "clamp(3rem,7vw,5.5rem)",
+          color: "#fff", margin: 0,
+          letterSpacing: "2px", lineHeight: 1.05,
+        }}>
+          LA COMUNIDAD
+        </h2>
+        <h2 style={{
+          fontFamily: "var(--font-anton),'Anton',sans-serif",
+          fontSize: "clamp(3rem,7vw,5.5rem)",
+          margin: "0 0 24px",
+          letterSpacing: "2px", lineHeight: 1.05,
+          background: "linear-gradient(90deg, #1CF094 0%, #a3ff47 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>
+          OPINA
+        </h2>
+        <div style={{
+          height: "2px", width: "60px",
+          background: "linear-gradient(90deg, #1CF094, #a3ff47)",
+          margin: "0 auto",
+          boxShadow: "0 0 14px rgba(28,240,148,0.5)",
+        }} />
+      </div>
+
+      {/* Marquee rows */}
+      <div style={{
+        display: "flex", flexDirection: "column", gap: "20px", overflow: "hidden",
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.8s ease 0.35s",
+      }}>
+        <div className="rv-row rv-row--fwd">
+          {doubled1.map((r, idx) => renderCard(r, idx))}
+        </div>
+        <div className="rv-row rv-row--rev">
+          {doubled2.map((r, idx) => renderCard(r, idx))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -884,6 +1183,7 @@ export default function IntroPage() {
 
       <VinylSection />
       <PlaylistCarouselSection />
+      <ReviewsSection />
     </>
   );
 }
