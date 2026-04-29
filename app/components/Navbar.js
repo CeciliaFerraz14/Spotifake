@@ -1,5 +1,8 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 const navCss = `
   @keyframes shimmer-nav {
@@ -88,6 +91,22 @@ const eqBars = [
 ];
 
 export default function Navbar() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => setLoggedIn(!!session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setLoggedIn(!!session));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
   return (
     <>
       <style>{navCss}</style>
@@ -151,9 +170,15 @@ export default function Navbar() {
 
           {/* Derecha: botón */}
           <div style={{ flexShrink: 0 }}>
-            <Link href="/usuario" className="nav-enter-btn">
-              Entrar
-            </Link>
+            {loggedIn ? (
+              <button onClick={handleLogout} className="nav-enter-btn" style={{ border: "none", cursor: "pointer" }}>
+                Cerrar sesión
+              </button>
+            ) : (
+              <Link href="/usuario" className="nav-enter-btn">
+                Entrar
+              </Link>
+            )}
           </div>
 
         </div>
