@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
@@ -63,10 +63,11 @@ const css = `
 
   .scroll-row {
     display: flex; gap: 14px;
-    overflow-x: auto; padding-bottom: 6px;
+    overflow-x: auto; padding-bottom: 6px; padding-top: 8px;
     scrollbar-width: none;
   }
   .scroll-row::-webkit-scrollbar { display: none; }
+  .scroll-row .dash-card:hover { transform: none; }
 
   .card-grid {
     display: flex;
@@ -178,16 +179,78 @@ const css = `
   .glow-pulse-card {
     animation: glow-accent-pulse ease-in-out infinite;
   }
+
+  .mix-hits-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  }
+
+  .panel-scroll {
+    overflow-y: auto; max-height: 240px;
+    scrollbar-width: thin; scrollbar-color: rgba(28,240,148,0.25) transparent;
+  }
+  .panel-scroll::-webkit-scrollbar { width: 3px; }
+  .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+  .panel-scroll::-webkit-scrollbar-thumb { background: rgba(28,240,148,0.3); border-radius: 2px; }
+  .hits-scroll { scrollbar-color: rgba(255,110,247,0.25) transparent; }
+  .hits-scroll::-webkit-scrollbar-thumb { background: rgba(255,110,247,0.3); }
+
+  @keyframes nota-fall {
+    0%   { transform: translateY(-30px) rotate(-12deg); opacity: 0; }
+    18%  { opacity: 0.95; }
+    82%  { opacity: 0.95; }
+    100% { transform: translateY(48px) rotate(14deg); opacity: 0; }
+  }
+  .nota-rain {
+    position: relative; width: 110px; height: 38px;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .nota {
+    position: absolute; top: 0; left: var(--left, 10%);
+    font-size: var(--size, 0.85rem); color: var(--color, #1CF094);
+    animation: nota-fall var(--dur, 1.2s) var(--del, 0s) linear infinite;
+    user-select: none; pointer-events: none; line-height: 1;
+  }
+
+  @keyframes backdrop-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .panel-backdrop {
+    position: fixed; inset: 0; z-index: 299;
+    background: rgba(0,4,12,0.8);
+    backdrop-filter: blur(7px);
+    animation: backdrop-in 0.3s ease both;
+  }
+  .panel-overlay {
+    position: fixed; z-index: 300;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.07);
+    transition:
+      top    0.48s cubic-bezier(0.4,0,0.2,1),
+      left   0.48s cubic-bezier(0.4,0,0.2,1),
+      width  0.48s cubic-bezier(0.4,0,0.2,1),
+      height 0.48s cubic-bezier(0.4,0,0.2,1),
+      border-radius 0.48s ease,
+      opacity 0.3s ease;
+  }
+  .hover-card {
+    border-radius: 18px; overflow: hidden;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    cursor: pointer;
+  }
+  .hover-card:hover {
+    box-shadow: 0 0 0 1px rgba(28,240,148,0.28), 0 8px 32px rgba(0,0,0,0.4);
+  }
 `;
 
 /* ── datos mock ── */
 const LIBRARY: (Track & { icon: string })[] = [
-  { title: "OK Computer",      artist: "Radiohead",        accent: "#6e2fff", icon: "💿", duration: 256 },
-  { title: "Nevermind",        artist: "Nirvana",           accent: "#ff3c3c", icon: "🎸", duration: 198 },
-  { title: "In Rainbows",      artist: "Radiohead",         accent: "#1CF094", icon: "🌈", duration: 222 },
-  { title: "Is This It",       artist: "The Strokes",       accent: "#ff9a00", icon: "🎶", duration: 194 },
-  { title: "AM",               artist: "Arctic Monkeys",    accent: "#00d4ff", icon: "🎵", duration: 212 },
-  { title: "Tranquility Base", artist: "Arctic Monkeys",    accent: "#ff6ef7", icon: "🚀", duration: 241 },
+  { title: "OK Computer",      artist: "Radiohead",        accent: "#6e2fff", icon: "♫", duration: 256 },
+  { title: "Nevermind",        artist: "Nirvana",           accent: "#ff3c3c", icon: "♪", duration: 198 },
+  { title: "In Rainbows",      artist: "Radiohead",         accent: "#1CF094", icon: "♬", duration: 222 },
+  { title: "Is This It",       artist: "The Strokes",       accent: "#ff9a00", icon: "♩", duration: 194 },
+  { title: "AM",               artist: "Arctic Monkeys",    accent: "#00d4ff", icon: "♫", duration: 212 },
+  { title: "Tranquility Base", artist: "Arctic Monkeys",    accent: "#ff6ef7", icon: "♬", duration: 241 },
 ];
 
 const PLAYLISTS = [
@@ -225,6 +288,24 @@ const EQ = Array.from({ length: 14 }, (_, i) => ({
   dur: `${(0.4 + (i % 5) * 0.1).toFixed(1)}s`,
   del: `${(i * 0.06).toFixed(2)}s`,
   h:   6 + (i % 6) * 5,
+}));
+
+const NOTE_CHARS = ['♩','♪','♫','♬'];
+const MIX_NOTES = Array.from({ length: 10 }, (_, i) => ({
+  char: NOTE_CHARS[i % 4],
+  color: ['#1CF094','#a3ff47','#5eead4','#00ffcc','#88ffd4','#1CF094','#a3ff47','#5eead4','#00ffcc','#88ffd4'][i],
+  left: `${4 + i * 9.5}%`,
+  dur: `${1.0 + (i % 4) * 0.22}s`,
+  del: `${(i * 0.19).toFixed(2)}s`,
+  size: `${0.72 + (i % 3) * 0.13}rem`,
+}));
+const HITS_NOTES = Array.from({ length: 10 }, (_, i) => ({
+  char: NOTE_CHARS[i % 4],
+  color: ['#ff6ef7','#ff3c3c','#ff9a00','#ff4488','#ffaacc','#ff6ef7','#ff3c3c','#ff9a00','#ff4488','#ffaacc'][i],
+  left: `${4 + i * 9.5}%`,
+  dur: `${1.0 + (i % 4) * 0.22}s`,
+  del: `${(i * 0.19).toFixed(2)}s`,
+  size: `${0.72 + (i % 3) * 0.13}rem`,
 }));
 
 function TrendIcon({ trend }: { trend: string }) {
@@ -296,11 +377,41 @@ type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; col
 
 export default function InicioPage() {
   const { playTrack } = usePlayer();
-  const [user, setUser]         = useState<{ name: string; email: string; photo?: string | null } | null>(null);
-  const [greeting, setGreeting] = useState("Bienvenido");
-  const [mounted, setMounted]   = useState(false);
-  const [sparkMap, setSparkMap] = useState<Record<string, SparkItem[]>>({});
+  const [user, setUser]               = useState<{ name: string; email: string; photo?: string | null } | null>(null);
+  const [greeting, setGreeting]       = useState("Bienvenido");
+  const [mounted, setMounted]         = useState(false);
+  const [sparkMap, setSparkMap]       = useState<Record<string, SparkItem[]>>({});
+  const [expandedSection, setExpandedSection] = useState<'mix' | 'hits' | null>(null);
+  const [overlayPhase, setOverlayPhase] = useState<'closed' | 'from' | 'open'>('closed');
+  const [cardRect, setCardRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const leaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mixCardRef  = useRef<HTMLDivElement>(null);
+  const hitsCardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const enterSection = (which: 'mix' | 'hits') => {
+    if (leaveTimer.current) clearTimeout(leaveTimer.current);
+    if (openTimer.current)  clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => {
+      const ref = which === 'mix' ? mixCardRef : hitsCardRef;
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      setCardRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+      setExpandedSection(which);
+      setOverlayPhase('from');
+      requestAnimationFrame(() => requestAnimationFrame(() => setOverlayPhase('open')));
+    }, 80);
+  };
+  const leaveSection = () => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+    setOverlayPhase('from');
+    leaveTimer.current = setTimeout(() => {
+      setExpandedSection(null);
+      setOverlayPhase('closed');
+      setCardRect(null);
+    }, 480);
+  };
 
   const spawnSparks = (key: string, e: React.MouseEvent<HTMLDivElement>, accent: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -463,7 +574,7 @@ export default function InicioPage() {
                     background: `radial-gradient(circle at 35% 35%, ${item.accent}55 0%, ${item.accent}22 60%, transparent 100%)`,
                     border: `1px solid ${item.accent}33`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "1.8rem",
+                    fontSize: "2rem", color: item.accent,
                   }}>
                     {item.icon}
                   </div>
@@ -540,9 +651,13 @@ export default function InicioPage() {
           </div>
         </section>
 
+        {/* ── Backdrop para sección expandida ── */}
+        {expandedSection && (
+          <div className="panel-backdrop" onClick={leaveSection} />
+        )}
+
         {/* ── Mix semanal + Hits del momento ── */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px",
+        <div className="mix-hits-grid" style={{
           marginBottom: "44px",
           animation: mounted ? "fade-in-up 0.6s ease 0.26s both" : "none",
         }}>
@@ -550,12 +665,17 @@ export default function InicioPage() {
           {/* Mix semanal */}
           <section>
             <SectionTitle>Mix semanal</SectionTitle>
-            <div style={{
-              marginTop: "16px",
-              background: "linear-gradient(145deg, rgba(28,240,148,0.07) 0%, rgba(94,234,212,0.04) 100%)",
-              border: "1px solid rgba(28,240,148,0.12)",
-              borderRadius: "18px", overflow: "hidden",
-            }}>
+            <div
+              ref={mixCardRef}
+              className="hover-card"
+              style={{
+                marginTop: "16px",
+                background: "linear-gradient(145deg, rgba(28,240,148,0.07) 0%, rgba(94,234,212,0.04) 100%)",
+                border: "1px solid rgba(28,240,148,0.12)",
+              }}
+              onMouseEnter={() => enterSection('mix')}
+              onMouseLeave={leaveSection}
+            >
               {/* Banner del mix */}
               <div style={{
                 padding: "18px 20px",
@@ -567,47 +687,65 @@ export default function InicioPage() {
                   width: "44px", height: "44px", borderRadius: "12px",
                   background: "linear-gradient(135deg, #1CF094, #5eead4)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "1.4rem", flexShrink: 0,
-                }}>🎲</div>
-                <div>
+                  fontSize: "1.5rem", flexShrink: 0, color: "#061a0e", fontWeight: 900,
+                }}>♬</div>
+                <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontWeight: 800, fontSize: "0.9rem", fontFamily: "var(--font-nunito), sans-serif" }}>Tu mix de la semana</div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>Basado en tus gustos</div>
                 </div>
+                <div className="nota-rain">
+                  {MIX_NOTES.map((n, i) => (
+                    <span key={i} className="nota" style={{
+                      ["--left" as string]: n.left,
+                      ["--color" as string]: n.color,
+                      ["--dur" as string]: n.dur,
+                      ["--del" as string]: n.del,
+                      ["--size" as string]: n.size,
+                    } as React.CSSProperties}>{n.char}</span>
+                  ))}
+                </div>
               </div>
               {/* Lista de canciones */}
-              {MIX.map((track, i) => (
-                <div key={i} className="hit-row" onClick={() => playTrack(track, MIX)}>
-                  <div style={{
-                    width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
-                    background: `hsl(${(i * 60 + 140) % 360}, 70%, 25%)`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "0.8rem", color: "rgba(255,255,255,0.7)",
-                    fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700,
-                  }}>
-                    {i + 1}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {track.title}
+              <div className="panel-scroll">
+                {MIX.map((track, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(track, MIX)}>
+                    <div style={{
+                      width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
+                      background: `hsl(${(i * 60 + 140) % 360}, 70%, 25%)`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "0.8rem", color: "rgba(255,255,255,0.7)",
+                      fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700,
+                    }}>
+                      {i + 1}
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{track.artist}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {track.title}
+                      </div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{track.artist}</div>
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
+                    <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
-                  <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
-                  <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </section>
 
           {/* Hits del momento */}
           <section>
             <SectionTitle>Hits del momento</SectionTitle>
-            <div style={{
-              marginTop: "16px",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "18px", overflow: "hidden",
-            }}>
+            <div
+              ref={hitsCardRef}
+              className="hover-card"
+              style={{
+                marginTop: "16px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
+              onMouseEnter={() => enterSection('hits')}
+              onMouseLeave={leaveSection}
+            >
               <div style={{
                 padding: "18px 20px",
                 background: "linear-gradient(90deg, rgba(255,100,80,0.08), rgba(255,80,120,0.04))",
@@ -618,34 +756,47 @@ export default function InicioPage() {
                   width: "44px", height: "44px", borderRadius: "12px",
                   background: "linear-gradient(135deg, #ff6ef7, #ff3c3c)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "1.4rem", flexShrink: 0,
-                }}>🔥</div>
-                <div>
+                  fontSize: "1.4rem", flexShrink: 0, color: "#1a0014", fontWeight: 900,
+                }}>★</div>
+                <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontWeight: 800, fontSize: "0.9rem", fontFamily: "var(--font-nunito), sans-serif" }}>Top canciones globales</div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>Actualizado hoy</div>
                 </div>
-              </div>
-              {HITS.map((h, i) => (
-                <div key={i} className="hit-row" onClick={() => playTrack(h, HITS)}>
-                  <div style={{
-                    width: "22px", textAlign: "center", flexShrink: 0,
-                    color: i === 0 ? "#1CF094" : "rgba(255,255,255,0.35)",
-                    fontWeight: 800, fontSize: "0.82rem",
-                    fontFamily: "var(--font-nunito), sans-serif",
-                  }}>
-                    {h.pos}
-                  </div>
-                  <TrendIcon trend={h.trend} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {h.title}
-                    </div>
-                    <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{h.artist}</div>
-                  </div>
-                  <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
-                  <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
+                <div className="nota-rain">
+                  {HITS_NOTES.map((n, i) => (
+                    <span key={i} className="nota" style={{
+                      ["--left" as string]: n.left,
+                      ["--color" as string]: n.color,
+                      ["--dur" as string]: n.dur,
+                      ["--del" as string]: n.del,
+                      ["--size" as string]: n.size,
+                    } as React.CSSProperties}>{n.char}</span>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <div className="panel-scroll hits-scroll">
+                {HITS.map((h, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(h, HITS)}>
+                    <div style={{
+                      width: "22px", textAlign: "center", flexShrink: 0,
+                      color: i === 0 ? "#1CF094" : "rgba(255,255,255,0.35)",
+                      fontWeight: 800, fontSize: "0.82rem",
+                      fontFamily: "var(--font-nunito), sans-serif",
+                    }}>
+                      {h.pos}
+                    </div>
+                    <TrendIcon trend={h.trend} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {h.title}
+                      </div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{h.artist}</div>
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
+                    <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         </div>
@@ -663,7 +814,7 @@ export default function InicioPage() {
                 }}>
                   {r.img
                     ? <img src={r.img} alt={r.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>🎵</div>
+                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem", color: `${r.accent}` }}>♪</div>
                   }
                   <span className="tag-pill" style={{
                     position: "absolute", top: "8px", left: "8px",
@@ -689,6 +840,106 @@ export default function InicioPage() {
         </section>
 
       </div>
+
+      {/* ── Panel expandido ── */}
+      {expandedSection && cardRect && (
+        <div
+          className="panel-overlay"
+          style={{
+            top:    overlayPhase === 'open' ? cardRect.top  + cardRect.height * 0.5 - cardRect.height * 0.65 : cardRect.top,
+            left:   overlayPhase === 'open' ? cardRect.left + cardRect.width  * 0.5 - cardRect.width  * 0.65 : cardRect.left,
+            width:  overlayPhase === 'open' ? cardRect.width  * 1.3 : cardRect.width,
+            height: overlayPhase === 'open' ? cardRect.height * 1.3 : cardRect.height,
+            borderRadius: overlayPhase === 'open' ? "24px" : "18px",
+            opacity: overlayPhase === 'from' && cardRect ? 0.6 : 1,
+            background: expandedSection === 'mix'
+              ? "linear-gradient(145deg, #0c1810 0%, #08121a 100%)"
+              : "linear-gradient(145deg, #18090f 0%, #120814 100%)",
+            border: expandedSection === 'mix'
+              ? "1px solid rgba(28,240,148,0.22)"
+              : "1px solid rgba(255,110,247,0.18)",
+            display: "flex", flexDirection: "column",
+          }}
+          onMouseEnter={() => enterSection(expandedSection)}
+          onMouseLeave={leaveSection}
+        >
+          {/* Banner */}
+          <div style={{
+            padding: "18px 20px",
+            background: expandedSection === 'mix'
+              ? "linear-gradient(90deg, rgba(28,240,148,0.14), rgba(163,255,71,0.06))"
+              : "linear-gradient(90deg, rgba(255,100,80,0.1), rgba(255,80,120,0.05))",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            display: "flex", alignItems: "center", gap: "14px",
+          }}>
+            <div style={{
+              width: "44px", height: "44px", borderRadius: "12px",
+              background: expandedSection === 'mix'
+                ? "linear-gradient(135deg, #1CF094, #5eead4)"
+                : "linear-gradient(135deg, #ff6ef7, #ff3c3c)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "1.5rem", flexShrink: 0,
+              color: expandedSection === 'mix' ? "#061a0e" : "#1a0014", fontWeight: 900,
+            }}>{expandedSection === 'mix' ? '♬' : '★'}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: "white", fontWeight: 800, fontSize: "0.95rem", fontFamily: "var(--font-nunito), sans-serif" }}>
+                {expandedSection === 'mix' ? 'Tu mix de la semana' : 'Top canciones globales'}
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
+                {expandedSection === 'mix' ? 'Basado en tus gustos' : 'Actualizado hoy'}
+              </div>
+            </div>
+            <div className="nota-rain">
+              {(expandedSection === 'mix' ? MIX_NOTES : HITS_NOTES).map((n, i) => (
+                <span key={i} className="nota" style={{
+                  ["--left" as string]: n.left, ["--color" as string]: n.color,
+                  ["--dur" as string]: n.dur,   ["--del" as string]: n.del,
+                  ["--size" as string]: n.size,
+                } as React.CSSProperties}>{n.char}</span>
+              ))}
+            </div>
+          </div>
+          {/* Lista */}
+          <div className={`panel-scroll${expandedSection === 'hits' ? ' hits-scroll' : ''}`} style={{ flex: 1, maxHeight: "none" }}>
+            {expandedSection === 'mix'
+              ? MIX.map((track, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(track, MIX)}>
+                    <div style={{
+                      width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
+                      background: `hsl(${(i * 60 + 140) % 360}, 70%, 25%)`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "0.8rem", color: "rgba(255,255,255,0.7)",
+                      fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700,
+                    }}>{i + 1}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{track.artist}</div>
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
+                    <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
+                  </div>
+                ))
+              : HITS.map((h, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(h, HITS)}>
+                    <div style={{
+                      width: "22px", textAlign: "center", flexShrink: 0,
+                      color: i === 0 ? "#1CF094" : "rgba(255,255,255,0.35)",
+                      fontWeight: 800, fontSize: "0.82rem",
+                      fontFamily: "var(--font-nunito), sans-serif",
+                    }}>{h.pos}</div>
+                    <TrendIcon trend={h.trend} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.title}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{h.artist}</div>
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
+                    <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
+                  </div>
+                ))
+            }
+          </div>
+        </div>
+      )}
     </div>
   );
 }
