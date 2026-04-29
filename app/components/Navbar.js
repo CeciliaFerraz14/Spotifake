@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
 const navCss = `
@@ -45,6 +45,11 @@ const navCss = `
   .nav-link:hover {
     color: #1CF094;
     background: rgba(28,240,148,0.08);
+  }
+  .nav-link--active {
+    color: #1CF094;
+    background: rgba(28,240,148,0.12);
+    box-shadow: inset 0 -2px 0 #1CF094;
   }
 
   .nav-enter-btn {
@@ -92,7 +97,8 @@ const eqBars = [
 
 export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState(false);
-  const router = useRouter();
+  const router   = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
@@ -163,9 +169,12 @@ export default function Navbar() {
 
           {/* Centro: links */}
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <Link href="/inicio" className="nav-link">Inicio</Link>
-            <Link href="/discos" className="nav-link">Discos</Link>
-            <Link href="/faq" className="nav-link">FAQ</Link>
+            <Link href={loggedIn ? "/inicio" : "/"} className={`nav-link${pathname === "/inicio" || pathname === "/" ? " nav-link--active" : ""}`}>Inicio</Link>
+            <Link href="/discos" className={`nav-link${pathname === "/discos" ? " nav-link--active" : ""}`}>Discos</Link>
+            <Link href="/faq" className={`nav-link${pathname === "/faq" ? " nav-link--active" : ""}`}>FAQ</Link>
+            {loggedIn && (
+              <Link href="/configuracion" className={`nav-link${pathname === "/configuracion" ? " nav-link--active" : ""}`}>Configuración</Link>
+            )}
           </div>
 
           {/* Derecha: botón */}

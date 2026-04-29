@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
 import type { Track } from "@/app/context/PlayerContext";
@@ -299,6 +300,7 @@ export default function InicioPage() {
   const [greeting, setGreeting] = useState("Bienvenido");
   const [mounted, setMounted]   = useState(false);
   const [sparkMap, setSparkMap] = useState<Record<string, SparkItem[]>>({});
+  const router = useRouter();
 
   const spawnSparks = (key: string, e: React.MouseEvent<HTMLDivElement>, accent: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -324,7 +326,7 @@ export default function InicioPage() {
     (async () => {
       const supabase = createClient();
       const { data: { user: u } } = await supabase.auth.getUser();
-      if (!u) return;
+      if (!u) { router.replace("/"); return; }
       const name =
         u.user_metadata?.full_name ||
         u.user_metadata?.name ||
