@@ -244,21 +244,21 @@ const css = `
 `;
 
 /* ── datos mock ── */
-const LIBRARY: (Track & { icon: string })[] = [
-  { title: "OK Computer",      artist: "Radiohead",        accent: "#6e2fff", icon: "♫", duration: 256 },
-  { title: "Nevermind",        artist: "Nirvana",           accent: "#ff3c3c", icon: "♪", duration: 198 },
-  { title: "In Rainbows",      artist: "Radiohead",         accent: "#1CF094", icon: "♬", duration: 222 },
-  { title: "Is This It",       artist: "The Strokes",       accent: "#ff9a00", icon: "♩", duration: 194 },
-  { title: "AM",               artist: "Arctic Monkeys",    accent: "#00d4ff", icon: "♫", duration: 212 },
-  { title: "Tranquility Base", artist: "Arctic Monkeys",    accent: "#ff6ef7", icon: "♬", duration: 241 },
+const LIBRARY: (Track & { icon: string; img?: string })[] = [
+  { title: "OK Computer",      artist: "Radiohead",        accent: "#6e2fff", icon: "♫", img: "/images/caratula1.jpg", duration: 256 },
+  { title: "Nevermind",        artist: "Nirvana",           accent: "#ff3c3c", icon: "♪", img: "/images/caratula2.jpg", duration: 198 },
+  { title: "In Rainbows",      artist: "Radiohead",         accent: "#1CF094", icon: "♬", img: "/images/caratula3.jpg", duration: 222 },
+  { title: "Is This It",       artist: "The Strokes",       accent: "#ff9a00", icon: "♩", img: "/images/caratula4.jpg", duration: 194 },
+  { title: "AM",               artist: "Arctic Monkeys",    accent: "#00d4ff", icon: "♫", img: "/images/caratula5.png", duration: 212 },
+  { title: "Tranquility Base", artist: "Arctic Monkeys",    accent: "#ff6ef7", icon: "♬", img: "/images/chil.jpg", duration: 241 },
 ];
 
 const PLAYLISTS = [
-  { name: "DARK MATTER",  songs: 41, accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)" },
-  { name: "NIGHT DRIVE",  songs: 32, accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)" },
-  { name: "CHILL WAVE",   songs: 28, accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)" },
-  { name: "EUPHORIA",     songs: 55, accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)" },
-  { name: "SOLAR FLARE",  songs: 36, accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)" },
+  { name: "DARK MATTER",  songs: 41, accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)",  img: "/images/playñist1.jpg" },
+  { name: "NIGHT DRIVE",  songs: 32, accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)", img: "/images/playlist2.jpg" },
+  { name: "CHILL WAVE",   songs: 28, accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)", img: "/images/playlist3.jpg" },
+  { name: "EUPHORIA",     songs: 55, accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)", img: "/images/Portada4.jpg" },
+  { name: "SOLAR FLARE",  songs: 36, accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)", img: "/images/playlisst5.jpg" },
 ];
 
 const RELEASES = [
@@ -575,8 +575,12 @@ export default function InicioPage() {
                     border: `1px solid ${item.accent}33`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: "2rem", color: item.accent,
+                    overflow: "hidden", flexShrink: 0,
                   }}>
-                    {item.icon}
+                    {item.img
+                      ? <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : item.icon
+                    }
                   </div>
                   <div style={{ fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "white", marginBottom: "3px", lineHeight: 1.2 }}>
                     {item.title}
@@ -627,12 +631,13 @@ export default function InicioPage() {
                   <div style={{
                     height: "100px", background: pl.bg,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    position: "relative",
+                    position: "relative", overflow: "hidden",
                   }}>
-                    <Vinyl accent={pl.accent} size={64} />
-                    <div style={{
-                      position: "absolute", bottom: "8px", right: "10px",
-                    }}>
+                    {pl.img
+                      ? <img src={pl.img} alt={pl.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+                      : <Vinyl accent={pl.accent} size={64} />
+                    }
+                    <div style={{ position: "absolute", bottom: "8px", right: "10px", zIndex: 1 }}>
                       <button className="play-btn"><PlayIcon /></button>
                     </div>
                   </div>
@@ -683,12 +688,10 @@ export default function InicioPage() {
                 borderBottom: "1px solid rgba(255,255,255,0.05)",
                 display: "flex", alignItems: "center", gap: "14px",
               }}>
-                <div style={{
+                <img src="/images/mixsemanal.jpg" alt="Mix semanal" style={{
                   width: "44px", height: "44px", borderRadius: "12px",
-                  background: "linear-gradient(135deg, #1CF094, #5eead4)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "1.5rem", flexShrink: 0, color: "#061a0e", fontWeight: 900,
-                }}>♬</div>
+                  objectFit: "cover", flexShrink: 0,
+                }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontWeight: 800, fontSize: "0.9rem", fontFamily: "var(--font-nunito), sans-serif" }}>Tu mix de la semana</div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>Basado en tus gustos</div>
@@ -752,12 +755,10 @@ export default function InicioPage() {
                 borderBottom: "1px solid rgba(255,255,255,0.05)",
                 display: "flex", alignItems: "center", gap: "14px",
               }}>
-                <div style={{
+                <img src="/images/hitsdelmomento.jpg" alt="Hits del momento" style={{
                   width: "44px", height: "44px", borderRadius: "12px",
-                  background: "linear-gradient(135deg, #ff6ef7, #ff3c3c)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "1.4rem", flexShrink: 0, color: "#1a0014", fontWeight: 900,
-                }}>★</div>
+                  objectFit: "cover", flexShrink: 0,
+                }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontWeight: 800, fontSize: "0.9rem", fontFamily: "var(--font-nunito), sans-serif" }}>Top canciones globales</div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>Actualizado hoy</div>
@@ -874,13 +875,11 @@ export default function InicioPage() {
           }}>
             <div style={{
               width: "44px", height: "44px", borderRadius: "12px",
-              background: expandedSection === 'mix'
-                ? "linear-gradient(135deg, #1CF094, #5eead4)"
-                : "linear-gradient(135deg, #ff6ef7, #ff3c3c)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "1.5rem", flexShrink: 0,
-              color: expandedSection === 'mix' ? "#061a0e" : "#1a0014", fontWeight: 900,
-            }}>{expandedSection === 'mix' ? '♬' : '★'}</div>
+            }}><img
+              src={expandedSection === 'mix' ? "/images/mixsemanal.jpg" : "/images/hitsdelmomento.jpg"}
+              alt={expandedSection === 'mix' ? "Mix semanal" : "Hits del momento"}
+              style={{ width: "44px", height: "44px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }}
+            /></div>
             <div style={{ flex: 1 }}>
               <div style={{ color: "white", fontWeight: 800, fontSize: "0.95rem", fontFamily: "var(--font-nunito), sans-serif" }}>
                 {expandedSection === 'mix' ? 'Tu mix de la semana' : 'Top canciones globales'}
