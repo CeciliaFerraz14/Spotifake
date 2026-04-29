@@ -225,7 +225,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } },
@@ -233,6 +233,13 @@ export default function RegisterPage() {
 
     setLoading(false);
     if (error) { setServerError(error.message); return; }
+
+    // Si la sesión viene null, Supabase requiere confirmar email primero
+    if (!data.session) {
+      setServerError("Revisa tu correo y confirma tu cuenta antes de iniciar sesión.");
+      return;
+    }
+
     setSuccess(true);
     setTimeout(() => router.push("/inicio"), 2000);
   };

@@ -2,8 +2,8 @@
 
 
 :root {
-  --background: #ffffff;
-  --foreground: #000000;
+  --background: #060910;
+  --foreground: #ffffff;
 
   --mint-bg: #d4ede4;
   --wood-beige: #f2d2a4;
@@ -22,9 +22,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #ffffff;
-    --foreground: #000000;
-   
+    --background: #060910;
+    --foreground: #ffffff;
   }
 }
 body {

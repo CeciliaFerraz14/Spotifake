@@ -4,7 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import MusicPlayer from "./components/MusicPlayer";
+import ConditionalPlayer from "./components/ConditionalPlayer";
 import { PlayerProvider } from "./context/PlayerContext";
 
 
@@ -48,9 +48,9 @@ export default function RootLayout({
         <Script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" strategy="beforeInteractive" />
         <PlayerProvider>
           <Navbar />
-          <main style={{ paddingBottom: "72px" }}>{children}</main>
+          <main>{children}</main>
           <Footer />
-          <MusicPlayer />
+          <ConditionalPlayer />
         </PlayerProvider>
       </body>
     </html>
