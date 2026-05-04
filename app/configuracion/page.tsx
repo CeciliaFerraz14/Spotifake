@@ -145,7 +145,7 @@ export default function ConfiguracionPage() {
   const [deleteMsg, setDeleteMsg]         = useState({ ok: "", err: "" });
   const [deleting, setDeleting]           = useState(false);
 
-  useEffect(() => {
+  useEffect(() => { //validar si hay usuario creado para mostrar la página
     setMounted(true);
     (async () => {
       const { data: { user: u } } = await supabase.auth.getUser();

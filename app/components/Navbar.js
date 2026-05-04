@@ -173,7 +173,10 @@ export default function Navbar() {
             <Link href="/discos" className={`nav-link${pathname === "/discos" ? " nav-link--active" : ""}`}>Discos</Link>
             <Link href="/faq" className={`nav-link${pathname === "/faq" ? " nav-link--active" : ""}`}>FAQ</Link>
             {loggedIn && (
-              <Link href="/configuracion" className={`nav-link${pathname === "/configuracion" ? " nav-link--active" : ""}`}>Configuración</Link>
+              <>
+                <Link href="/configuracion" className={`nav-link${pathname === "/configuracion" ? " nav-link--active" : ""}`}>Configuración</Link>
+                <Link href="/playlists" className={`nav-link${pathname === "/playlists" ? " nav-link--active" : ""}`}>Playlists</Link>
+              </>
             )}
           </div>
 
