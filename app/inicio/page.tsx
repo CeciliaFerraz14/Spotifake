@@ -379,6 +379,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number };
 
+type UserPlaylist = { id: string; nombre: string; accent: string };
+
 export default function InicioPage() {
   const { playTrack } = usePlayer();
   const [user, setUser]               = useState<{ name: string; email: string; photo?: string | null } | null>(null);
@@ -393,6 +395,11 @@ export default function InicioPage() {
   const mixCardRef  = useRef<HTMLDivElement>(null);
   const hitsCardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const [likedSet, setLikedSet]         = useState<Set<string>>(new Set());
+  const [userPlaylists, setUserPlaylists] = useState<UserPlaylist[]>([]);
+  const [addModal, setAddModal]         = useState<Track | null>(null);
+  const [addFeedback, setAddFeedback]   = useState<string | null>(null);
 
   const enterSection = (which: 'mix' | 'hits') => {
     if (leaveTimer.current) clearTimeout(leaveTimer.current);
@@ -449,8 +456,62 @@ export default function InicioPage() {
         "Usuario";
       const photo = u.user_metadata?.avatar_url ?? null;
       setUser({ name, email: u.email ?? "", photo });
+
+      const [likesRes, plRes] = await Promise.all([
+        fetch('/api/likes'),
+        fetch('/api/playlists'),
+      ]);
+      if (likesRes.ok) {
+        const data = await likesRes.json();
+        if (Array.isArray(data)) {
+          setLikedSet(new Set(data.map((s: any) => `${s.titulo}|${s.artista}`)));
+        }
+      }
+      if (plRes.ok) {
+        const data = await plRes.json();
+        if (Array.isArray(data)) setUserPlaylists(data);
+      }
     })();
   }, []);
+
+  const toggleLike = async (track: Track, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const key = `${track.title}|${track.artist}`;
+    const liked = likedSet.has(key);
+    if (liked) {
+      await fetch('/api/likes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: track.title, artista: track.artist }),
+      });
+      setLikedSet(prev => { const n = new Set(prev); n.delete(key); return n; });
+    } else {
+      await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration }),
+      });
+      setLikedSet(prev => new Set(prev).add(key));
+    }
+  };
+
+  const addToPlaylist = async (playlistId: string, track: Track) => {
+    const res = await fetch(`/api/playlists/${playlistId}/canciones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration }),
+    });
+    setAddModal(null);
+    const pl = userPlaylists.find(p => p.id === playlistId);
+    if (res.status === 409) {
+      setAddFeedback('Ya está en esa playlist');
+    } else if (res.ok) {
+      setAddFeedback(`Añadida a ${pl?.nombre ?? 'playlist'}`);
+    } else {
+      setAddFeedback('Error al añadir');
+    }
+    setTimeout(() => setAddFeedback(null), 2500);
+  };
 
   const firstName = user?.name?.split(" ")[0] ?? "";
 
@@ -733,6 +794,8 @@ export default function InicioPage() {
                       <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
+                    <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
+                    <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))}
@@ -799,6 +862,8 @@ export default function InicioPage() {
                       <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(h.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{h.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
+                    <button onClick={e => toggleLike(h, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${h.title}|${h.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
+                    <button onClick={e => { e.stopPropagation(); setAddModal(h); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))}
@@ -920,6 +985,8 @@ export default function InicioPage() {
                       <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
+                    <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
+                    <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))
@@ -937,11 +1004,91 @@ export default function InicioPage() {
                       <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(h.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{h.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
+                    <button onClick={e => toggleLike(h, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${h.title}|${h.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
+                    <button onClick={e => { e.stopPropagation(); setAddModal(h); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))
             }
           </div>
+        </div>
+      )}
+
+      {/* Modal: añadir a playlist */}
+      {addModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 500,
+            background: "rgba(0,4,12,0.75)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={() => setAddModal(null)}
+        >
+          <div
+            style={{
+              background: "linear-gradient(145deg,#0d1a12,#0a0f1a)",
+              border: "1px solid rgba(28,240,148,0.2)",
+              borderRadius: "20px", padding: "28px 24px",
+              width: "100%", maxWidth: "340px",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.8)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 6px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1rem" }}>
+              Añadir a playlist
+            </h3>
+            <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.35)", fontSize: "0.78rem", fontFamily: "Arial, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {addModal.title} · {addModal.artist}
+            </p>
+            {userPlaylists.length === 0 ? (
+              <p style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", textAlign: "center", padding: "16px 0" }}>
+                No tienes playlists aún.{" "}
+                <span style={{ color: "#1CF094", cursor: "pointer" }} onClick={() => { setAddModal(null); router.push("/playlists"); }}>
+                  Crear una
+                </span>
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto" }}>
+                {userPlaylists.map(pl => (
+                  <button
+                    key={pl.id}
+                    onClick={() => addToPlaylist(pl.id, addModal)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "12px",
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "10px", padding: "10px 14px",
+                      cursor: "pointer", width: "100%", textAlign: "left",
+                      transition: "background 0.15s, border-color 0.15s",
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLElement).style.borderColor = `${pl.accent}55`; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
+                  >
+                    <div style={{ width: "28px", height: "28px", borderRadius: "6px", background: "rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: pl.accent, fontSize: "0.85rem" }}>♫</span>
+                    </div>
+                    <span style={{ color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem" }}>
+                      {pl.nombre}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast feedback */}
+      {addFeedback && (
+        <div style={{
+          position: "fixed", bottom: "100px", left: "50%", transform: "translateX(-50%)",
+          background: "rgba(28,240,148,0.15)", border: "1px solid rgba(28,240,148,0.35)",
+          borderRadius: "50px", padding: "10px 22px",
+          color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem",
+          zIndex: 600, backdropFilter: "blur(8px)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.4)", whiteSpace: "nowrap",
+        }}>
+          {addFeedback}
         </div>
       )}
     </div>

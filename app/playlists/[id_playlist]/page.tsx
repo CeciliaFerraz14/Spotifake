@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
-import { PLAYLISTS } from "../playlistsData";
+
+type DbPlaylist = { id: string; nombre: string; accent: string; bg: string };
+type DbCancion  = { id: string; titulo: string; artista: string; accent?: string; duracion?: number; position: number };
 
 const css = `
   @keyframes fade-in-up {
@@ -34,7 +36,7 @@ const css = `
 
   .track-row {
     display: grid;
-    grid-template-columns: 32px 1fr auto;
+    grid-template-columns: 32px 1fr auto auto;
     align-items: center;
     gap: 16px;
     padding: 11px 18px;
@@ -110,12 +112,7 @@ const css = `
   .tracks-scroll::-webkit-scrollbar-thumb { background: rgba(28,240,148,0.3); border-radius: 2px; }
 `;
 
-const STAR_COLORS = [
-  "#ffffff", "#1CF094", "#5eead4", "#a3ff47",
-  "#00d4ff", "#6e2fff", "#ff6ef7", "#ff9a00",
-  "#ffeeaa", "#aaddff",
-];
-
+const STAR_COLORS = ["#ffffff","#1CF094","#5eead4","#a3ff47","#00d4ff","#6e2fff","#ff6ef7","#ff9a00","#ffeeaa","#aaddff"];
 const STARS = Array.from({ length: 140 }, (_, i) => ({
   top:    `${(i * 37 + 13) % 100}%`,
   left:   `${(i * 53 +  7) % 100}%`,
@@ -171,20 +168,55 @@ export default function PlaylistDetailPage() {
   const supabase = createClient();
   const { playTrack, track: currentTrack, playing } = usePlayer();
 
-  const [cargando, setCargando] = useState(true);
-  const [mounted,  setMounted]  = useState(false);
+  const [cargando, setCargando]   = useState(true);
+  const [mounted,  setMounted]    = useState(false);
+  const [playlist, setPlaylist]   = useState<DbPlaylist | null>(null);
+  const [canciones, setCanciones] = useState<DbCancion[]>([]);
 
-  const id       = Number(params.id_playlist);
-  const playlist = PLAYLISTS.find(p => p.id === id);
+  const playlistId = params.id_playlist as string;
 
   useEffect(() => {
     setMounted(true);
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/usuario"); return; }
+
+      const [plRes, canRes] = await Promise.all([
+        fetch('/api/playlists'),
+        fetch(`/api/playlists/${playlistId}/canciones`),
+      ]);
+
+      if (plRes.ok) {
+        const all: DbPlaylist[] = await plRes.json();
+        const found = all.find(p => p.id === playlistId) ?? null;
+        if (!found) { router.replace("/playlists"); return; }
+        setPlaylist(found);
+      } else {
+        router.replace("/playlists"); return;
+      }
+
+      if (canRes.ok) {
+        const data = await canRes.json();
+        setCanciones(Array.isArray(data) ? data : []);
+      }
+
       setCargando(false);
     })();
-  }, []);
+  }, [playlistId]);
+
+  const tracks = canciones.map(c => ({ title: c.titulo, artist: c.artista, accent: c.accent, duration: c.duracion }));
+  const totalDuration = canciones.reduce((acc, c) => acc + (c.duracion ?? 0), 0);
+  const accent = playlist?.accent ?? "#1CF094";
+
+  const removeCancion = async (cancion: DbCancion, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await fetch(`/api/playlists/${playlistId}/canciones`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cancion_id: cancion.id }),
+    });
+    setCanciones(prev => prev.filter(c => c.id !== cancion.id));
+  };
 
   if (cargando) return (
     <div style={{ color: "white", textAlign: "center", marginTop: "100px", fontFamily: "var(--font-nunito), sans-serif" }}>
@@ -192,60 +224,28 @@ export default function PlaylistDetailPage() {
     </div>
   );
 
-  if (!playlist) return (
-    <div style={{ color: "white", textAlign: "center", marginTop: "100px", fontFamily: "var(--font-nunito), sans-serif" }}>
-      Playlist no encontrada.{" "}
-      <span style={{ color: "#1CF094", cursor: "pointer" }} onClick={() => router.back()}>Volver</span>
-    </div>
-  );
-
-  const totalDuration = playlist.tracks.reduce((acc, t) => acc + (t.duration ?? 0), 0);
-  const accent = playlist.accent;
+  if (!playlist) return null;
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       <style>{css}</style>
 
-      {/* ── Fondo galaxia ── */}
+      {/* Fondo galaxia */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
         background: `
           radial-gradient(ellipse at 20% 30%, ${accent}18 0%, transparent 55%),
           radial-gradient(ellipse at 80% 70%, #6e2fff18 0%, transparent 55%),
-          radial-gradient(ellipse at 50% 10%, #00d4ff0d 0%, transparent 50%),
           radial-gradient(ellipse at 50% 50%, #0a0f2a 0%, #03040f 70%, #000 100%)
         `,
       }} />
+      <div style={{ position: "fixed", top: "10%", left: "5%", width: "45vw", height: "45vw", borderRadius: "50%", zIndex: 0, pointerEvents: "none", background: `radial-gradient(circle, ${accent}0f 0%, transparent 70%)`, animation: "nebula-drift 18s ease-in-out infinite", filter: "blur(40px)" }} />
+      <div style={{ position: "fixed", bottom: "5%", right: "5%", width: "50vw", height: "50vw", borderRadius: "50%", zIndex: 0, pointerEvents: "none", background: "radial-gradient(circle, #6e2fff0f 0%, transparent 70%)", animation: "nebula-drift 24s ease-in-out 4s infinite reverse", filter: "blur(50px)" }} />
 
-      {/* Nebulosas */}
-      <div style={{
-        position: "fixed", top: "10%", left: "5%", width: "45vw", height: "45vw",
-        borderRadius: "50%", zIndex: 0, pointerEvents: "none",
-        background: `radial-gradient(circle, ${accent}0f 0%, transparent 70%)`,
-        animation: "nebula-drift 18s ease-in-out infinite",
-        filter: "blur(40px)",
-      }} />
-      <div style={{
-        position: "fixed", bottom: "5%", right: "5%", width: "50vw", height: "50vw",
-        borderRadius: "50%", zIndex: 0, pointerEvents: "none",
-        background: "radial-gradient(circle, #6e2fff0f 0%, transparent 70%)",
-        animation: "nebula-drift 24s ease-in-out 4s infinite reverse",
-        filter: "blur(50px)",
-      }} />
-
-      {/* Estrellas de colores */}
       {STARS.map((s, i) => (
-        <div key={i} style={{
-          position: "fixed", zIndex: 0, pointerEvents: "none",
-          width: s.size, height: s.size, borderRadius: "50%",
-          background: s.color,
-          boxShadow: `0 0 ${s.size * 2}px ${s.color}`,
-          top: s.top, left: s.left, opacity: s.opacity,
-          animation: `twinkle ${s.dur} ${s.del} ease-in-out infinite`,
-        }} />
+        <div key={i} style={{ position: "fixed", zIndex: 0, pointerEvents: "none", width: s.size, height: s.size, borderRadius: "50%", background: s.color, boxShadow: `0 0 ${s.size * 2}px ${s.color}`, top: s.top, left: s.left, opacity: s.opacity, animation: `twinkle ${s.dur} ${s.del} ease-in-out infinite` }} />
       ))}
 
-      {/* ── Contenido ── */}
       <div style={{ position: "relative", zIndex: 1, maxWidth: "860px", margin: "0 auto", padding: "36px 24px 140px" }}>
 
         {/* Botón volver */}
@@ -258,65 +258,25 @@ export default function PlaylistDetailPage() {
           </button>
         </div>
 
-        {/* ── Panel superior: portada + info + botones ── */}
-        <div
-          className="glass-panel"
-          style={{
-            padding: "32px",
-            marginBottom: "20px",
-            borderColor: `${accent}22`,
-            animation: mounted ? "fade-in-up 0.55s ease 0.05s both" : "none",
-          }}
-        >
+        {/* Panel superior: portada + info + botones */}
+        <div className="glass-panel" style={{ padding: "32px", marginBottom: "20px", borderColor: `${accent}22`, animation: mounted ? "fade-in-up 0.55s ease 0.05s both" : "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "32px", flexWrap: "wrap" }}>
-
-            {/* Portada */}
-            <div style={{
-              width: 160, height: 160, borderRadius: "18px",
-              background: playlist.bg,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-              boxShadow: `0 0 60px ${accent}33, 0 12px 40px rgba(0,0,0,0.6)`,
-              border: `1px solid ${accent}33`,
-            }}>
-              <Vinyl accent={accent} size={110}
-                spinning={playing && playlist.tracks.some(t => t.title === currentTrack?.title)} />
+            <div style={{ width: 160, height: 160, borderRadius: "18px", background: playlist.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 0 60px ${accent}33, 0 12px 40px rgba(0,0,0,0.6)`, border: `1px solid ${accent}33` }}>
+              <Vinyl accent={accent} size={110} spinning={playing && canciones.some(c => c.titulo === currentTrack?.title)} />
             </div>
-
-            {/* Info + botones */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{
-                color: "rgba(255,255,255,0.45)", fontSize: "0.72rem",
-                fontFamily: "var(--font-nunito), sans-serif",
-                letterSpacing: "1.5px", textTransform: "uppercase", margin: "0 0 8px",
-              }}>
+              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.72rem", fontFamily: "var(--font-nunito), sans-serif", letterSpacing: "1.5px", textTransform: "uppercase", margin: "0 0 8px" }}>
                 Playlist
               </p>
-              <h1 style={{
-                margin: "0 0 8px",
-                fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
-                fontWeight: 900, fontSize: "clamp(1.7rem, 5vw, 2.6rem)",
-                background: `linear-gradient(90deg, #fff 0%, ${accent} 130%)`,
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                lineHeight: 1.1,
-              }}>
+              <h1 style={{ margin: "0 0 8px", fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif", fontWeight: 900, fontSize: "clamp(1.7rem, 5vw, 2.6rem)", background: `linear-gradient(90deg, #fff 0%, ${accent} 130%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", lineHeight: 1.1 }}>
                 {playlist.nombre}
               </h1>
-              <p style={{
-                color: "rgba(255,255,255,0.35)", fontSize: "0.8rem",
-                fontFamily: "Arial, sans-serif", margin: "0 0 26px",
-              }}>
-                {playlist.tracks.length} {playlist.tracks.length === 1 ? "canción" : "canciones"} · {fmt(totalDuration)}
+              <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.8rem", fontFamily: "Arial, sans-serif", margin: "0 0 26px" }}>
+                {canciones.length} {canciones.length === 1 ? "canción" : "canciones"} · {fmt(totalDuration)}
               </p>
-
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                <button
-                  className="play-all-btn"
-                  onClick={() => playlist.tracks.length > 0 && playTrack(playlist.tracks[0], playlist.tracks)}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#061210">
-                    <polygon points="5,3 19,12 5,21" />
-                  </svg>
+                <button className="play-all-btn" onClick={() => tracks.length > 0 && playTrack(tracks[0], tracks)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#061210"><polygon points="5,3 19,12 5,21" /></svg>
                   Reproducir todo
                 </button>
                 <button className="shuffle-btn">
@@ -331,62 +291,57 @@ export default function PlaylistDetailPage() {
           </div>
         </div>
 
-        {/* ── Panel inferior: lista de canciones ── */}
-        <div
-          className="glass-panel"
-          style={{
-            borderColor: `${accent}18`,
-            animation: mounted ? "fade-in-up 0.55s ease 0.12s both" : "none",
-          }}
-        >
+        {/* Panel lista de canciones */}
+        <div className="glass-panel" style={{ borderColor: `${accent}18`, animation: mounted ? "fade-in-up 0.55s ease 0.12s both" : "none" }}>
           {/* Cabecera tabla */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "32px 1fr auto",
-            gap: "16px", padding: "14px 18px",
-            borderBottom: `1px solid rgba(255,255,255,0.07)`,
-          }}>
+          <div style={{ display: "grid", gridTemplateColumns: "32px 1fr auto auto", gap: "16px", padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
             <span style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif", textAlign: "center" }}>#</span>
             <span style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif", letterSpacing: "0.8px", textTransform: "uppercase" }}>Título</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
+            <span />
           </div>
 
           {/* Filas */}
           <div className="tracks-scroll" style={{ padding: "6px 0" }}>
-            {playlist.tracks.map((t, i) => {
-              const isActive = currentTrack?.title === t.title && currentTrack?.artist === t.artist;
+            {canciones.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-nunito), sans-serif" }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: "12px", opacity: 0.3 }}>♫</div>
+                Esta playlist está vacía.<br />
+                <span style={{ fontSize: "0.85rem" }}>Añade canciones desde la página de inicio.</span>
+              </div>
+            ) : canciones.map((c, i) => {
+              const track = tracks[i];
+              const isActive = currentTrack?.title === c.titulo && currentTrack?.artist === c.artista;
               return (
-                <div
-                  key={i}
-                  className={`track-row${isActive ? " active" : ""}`}
-                  onClick={() => playTrack(t, playlist.tracks)}
-                >
+                <div key={c.id} className={`track-row${isActive ? " active" : ""}`} onClick={() => playTrack(track, tracks)}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {isActive && playing
                       ? <EqBars accent={accent} />
-                      : <span style={{
-                          color: isActive ? accent : "rgba(255,255,255,0.3)",
-                          fontSize: "0.8rem", fontFamily: "Arial, sans-serif",
-                          fontWeight: isActive ? 700 : 400,
-                        }}>{i + 1}</span>
+                      : <span style={{ color: isActive ? accent : "rgba(255,255,255,0.3)", fontSize: "0.8rem", fontFamily: "Arial, sans-serif", fontWeight: isActive ? 700 : 400 }}>{i + 1}</span>
                     }
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      color: isActive ? accent : "white",
-                      fontWeight: 700, fontSize: "0.88rem",
-                      fontFamily: "var(--font-nunito), sans-serif",
-                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                      transition: "color 0.15s",
-                    }}>{t.title}</div>
+                    <div style={{ color: isActive ? accent : "white", fontWeight: 700, fontSize: "0.88rem", fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: "color 0.15s" }}>
+                      {c.titulo}
+                    </div>
                     <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.74rem", fontFamily: "Arial, sans-serif", marginTop: "2px" }}>
-                      {t.artist}
+                      {c.artista}
                     </div>
                   </div>
                   <span style={{ color: "rgba(255,255,255,0.32)", fontSize: "0.78rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>
-                    {fmt(t.duration ?? 0)}
+                    {fmt(c.duracion ?? 0)}
                   </span>
+                  <button
+                    onClick={e => removeCancion(c, e)}
+                    title="Quitar de la playlist"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", fontSize: "1rem", lineHeight: 1, padding: "4px", transition: "color 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#ff5078")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                  >
+                    ×
+                  </button>
                 </div>
               );
             })}

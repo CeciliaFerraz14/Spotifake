@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { PLAYLISTS, Playlist } from "./playlistsData";
+type Playlist = { id: string; nombre: string; accent: string; bg: string; canciones?: number };
 
 const css = `
   @keyframes fade-in-up {
@@ -253,7 +253,8 @@ export default function PlaylistsPage() {
   const [user, setUser]           = useState<any>(null);
   const [cargando, setCargando]   = useState(true);
   const [mounted, setMounted]     = useState(false);
-  const [playlists, setPlaylists] = useState<Playlist[]>(PLAYLISTS);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [likedCount, setLikedCount] = useState(0);
   const [sparkMap, setSparkMap]   = useState<Record<string, SparkItem[]>>({});
 
   // Modal estado
@@ -267,6 +268,18 @@ export default function PlaylistsPage() {
       const { data: { user: u } } = await supabase.auth.getUser();
       if (!u) { router.replace("/usuario"); return; }
       setUser(u);
+      const [plRes, likedRes] = await Promise.all([
+        fetch('/api/playlists'),
+        fetch('/api/likes'),
+      ]);
+      if (plRes.ok) {
+        const data = await plRes.json();
+        setPlaylists(Array.isArray(data) ? data : []);
+      }
+      if (likedRes.ok) {
+        const data = await likedRes.json();
+        setLikedCount(Array.isArray(data) ? data.length : 0);
+      }
       setCargando(false);
     })();
   }, []);
@@ -285,14 +298,19 @@ export default function PlaylistsPage() {
     setTimeout(() => setSparkMap(prev => { const n = { ...prev }; delete n[key]; return n; }), 700);
   };
 
-  const crearPlaylist = () => {
+  const crearPlaylist = async () => {
     const nombre = nuevoNombre.trim();
     if (!nombre) return;
     const color = COLOR_OPTIONS[colorIdx];
-    setPlaylists(prev => [
-      ...prev,
-      { id: Date.now(), nombre, canciones: 0, accent: color.accent, bg: color.bg, tracks: [] },
-    ]);
+    const res = await fetch('/api/playlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, accent: color.accent, bg: color.bg }),
+    });
+    if (res.ok) {
+      const nueva = await res.json();
+      setPlaylists(prev => [...prev, nueva]);
+    }
     setNuevoNombre("");
     setColorIdx(0);
     setModalOpen(false);
@@ -398,25 +416,59 @@ export default function PlaylistsPage() {
             </span>
           </h2>
 
-          {/* Estado vacío */}
-          {playlists.length === 0 ? (
-            <div className="empty-state">
-              <div style={{ fontSize: "3.5rem", opacity: 0.3 }}>♫</div>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "1rem", margin: 0 }}>
-                Aún no tienes playlists
-              </p>
-              <button className="create-btn" onClick={() => setModalOpen(true)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0a0f1a" strokeWidth="3" strokeLinecap="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5"  y1="12" x2="19" y2="12" />
-                </svg>
-                Crear mi primera playlist
-              </button>
+          {/* Grid de playlists */}
+          <div className="card-grid" style={{ marginTop: "16px" }}>
+
+            {/* Card especial: Canciones que me gustan */}
+            <div
+              className="spark-host"
+              style={{ flex: "1 1 160px", minWidth: "150px", maxWidth: "220px", position: "relative" }}
+            >
+              <div
+                className="pl-card wave-card glow-pulse-card"
+                style={{
+                  padding: 0,
+                  ["--glow-color" as string]: "rgba(255,80,120,0.45)",
+                  ["--glow-border" as string]: "rgba(255,80,120,0.25)",
+                  ["--streak-delay" as string]: "0s",
+                  animationDuration: "2.6s",
+                  cursor: "pointer",
+                } as React.CSSProperties}
+                onClick={() => router.push('/playlists/liked')}
+              >
+                <div style={{
+                  height: "110px",
+                  background: "linear-gradient(145deg,#1a001a,#3a0030)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  position: "relative", overflow: "hidden",
+                }}>
+                  <span style={{ fontSize: "2.8rem", filter: "drop-shadow(0 0 12px rgba(255,80,120,0.8))" }}>♥</span>
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background: "radial-gradient(circle at 30% 30%, rgba(255,80,120,0.2), transparent 70%)",
+                    pointerEvents: "none",
+                  }} />
+                </div>
+                <div style={{ padding: "12px 14px" }}>
+                  <div style={{
+                    fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900,
+                    fontSize: "0.85rem", color: "white", letterSpacing: "0.3px",
+                  }}>
+                    Me gusta
+                  </div>
+                  <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", marginTop: "3px" }}>
+                    {likedCount === 0 ? "Sin canciones" : `${likedCount} canciones`}
+                  </div>
+                  <div style={{
+                    marginTop: "10px", height: "2px", borderRadius: "2px",
+                    background: "linear-gradient(90deg, #ff5078, transparent)",
+                    opacity: 0.7,
+                  }} />
+                </div>
+              </div>
             </div>
-          ) : (
-            /* Grid de playlists */
-            <div className="card-grid" style={{ marginTop: "16px" }}>
-              {playlists.map((pl, i) => (
+
+            {playlists.map((pl, i) => (
                 <div
                   key={pl.id}
                   className="spark-host"
@@ -503,7 +555,6 @@ export default function PlaylistsPage() {
                 </div>
               ))}
             </div>
-          )}
         </section>
       </div>
 
