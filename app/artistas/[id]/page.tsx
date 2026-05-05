@@ -1,33 +1,35 @@
 "use client";
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Base de datos ficticia de artistas
-const artistas: Record<string, { nombre: string; genero: string; canciones: string[] }> = {
-  radiohead:                    { nombre: "Radiohead",                   genero: "Rock alternativo", canciones: ["Paranoid Android", "Creep", "Karma Police", "In Rainbows"] },
-  nirvana:                      { nombre: "Nirvana",                     genero: "Grunge",           canciones: ["Come as You Are", "Smells Like Teen Spirit", "Heart-Shaped Box"] },
-  "arctic-monkeys":             { nombre: "Arctic Monkeys",              genero: "Indie rock",       canciones: ["R U Mine?", "Do I Wanna Know?", "505", "AM"] },
-  "the-strokes":                { nombre: "The Strokes",                 genero: "Garage rock",      canciones: ["Last Nite", "Reptilia", "Someday", "Is This It"] },
-  "the-weeknd":                 { nombre: "The Weeknd",                  genero: "R&B / Pop",        canciones: ["Blinding Lights", "Starboy", "Save Your Tears"] },
-  "miley-cyrus":                { nombre: "Miley Cyrus",                 genero: "Pop",              canciones: ["Flowers", "Wrecking Ball", "Nothing Breaks Like a Heart"] },
-  "harry-styles":               { nombre: "Harry Styles",                genero: "Pop / Rock",       canciones: ["As It Was", "Watermelon Sugar", "Adore You"] },
-  "taylor-swift":               { nombre: "Taylor Swift",                genero: "Pop / Country",    canciones: ["Anti-Hero", "Shake It Off", "Blank Space"] },
-  "sam-smith":                  { nombre: "Sam Smith",                   genero: "Soul / Pop",       canciones: ["Unholy", "Stay With Me", "Writing's on the Wall"] },
-  "the-synthwave-collective":   { nombre: "The Synthwave Collective",    genero: "Synthwave",        canciones: ["REGU", "Neon Grid", "After Dark"] },
-  "clara-montoya":              { nombre: "Clara Montoya",               genero: "Indie pop",        canciones: ["Lluvia de Abril", "Sal y Mar", "Verano Eterno"] },
-  "broken-orbit":               { nombre: "Broken Orbit",               genero: "Electronic",       canciones: ["Midnight Echo", "Signal Lost", "Orbit"] },
-  "synthwave-era":              { nombre: "Synthwave Era",               genero: "Synthwave",        canciones: ["Neon Pulse", "Drive Forever", "Retro Wave"] },
-};
+const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
+
+type Artista = { nombre: string; genero: string };
 
 export default function ArtistaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }  = use(params);
   const router  = useRouter();
-  const artista = artistas[id];
+  const [artista, setArtista] = useState<Artista | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Si el ID no existe en nuestra base de datos, volvemos atrás
-    if (!artista) router.replace("/inicio");
-  }, []);
+    fetch("/api/artista")
+      .then(r => r.json())
+      .then((data: Artista[]) => {
+        if (!Array.isArray(data)) { router.replace("/inicio"); return; }
+        const found = data.find(a => toSlug(a.nombre) === id) ?? null;
+        if (!found) { router.replace("/inicio"); return; }
+        setArtista(found);
+      })
+      .catch(() => router.replace("/inicio"))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return (
+    <div style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", marginTop: "80px", fontFamily: "var(--font-nunito)" }}>
+      Cargando…
+    </div>
+  );
 
   if (!artista) return null;
 
@@ -50,36 +52,6 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
         </p>
       </div>
 
-      {/* Lista de canciones */}
-      <h2 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "1rem", marginBottom: "12px" }}>
-        Canciones populares
-      </h2>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {artista.canciones.map((cancion, i) => (
-          <div
-            key={cancion}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "12px",
-              padding: "14px 18px",
-            }}
-          >
-            {/* Número de posición */}
-            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem", width: "20px" }}>
-              {i + 1}
-            </span>
-            {/* Nombre de la canción */}
-            <span style={{ color: "white", fontFamily: "var(--font-nunito)", fontWeight: 600 }}>
-              {cancion}
-            </span>
-          </div>
-        ))}
-      </div>
 
       {/* Botón volver */}
       <button

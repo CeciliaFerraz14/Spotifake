@@ -281,11 +281,22 @@ function Thumb({ img, accent, isArtist = false }) {
   );
 }
 
+const toSlug = (name) => name.toLowerCase().replace(/\s+/g, "-");
+
 function SearchBox() {
-  const [open, setOpen]     = useState(false);
-  const [query, setQuery]   = useState("");
-  const wrapRef             = useRef(null);
-  const inputRef            = useRef(null);
+  const [open, setOpen]         = useState(false);
+  const [query, setQuery]       = useState("");
+  const [dbArtistas, setDbArtistas] = useState([]);
+  const wrapRef                 = useRef(null);
+  const inputRef                = useRef(null);
+  const router                  = useRouter();
+
+  useEffect(() => {
+    fetch("/api/artista")
+      .then(r => r.json())
+      .then(data => Array.isArray(data) ? setDbArtistas(data) : [])
+      .catch(() => {});
+  }, []);
 
   const q = query.trim().toLowerCase();
 
@@ -293,11 +304,17 @@ function SearchBox() {
     ? CANCIONES.filter(c => c.title.toLowerCase().includes(q) || c.artist.toLowerCase().includes(q))
     : [];
   const artistas = q
-    ? ARTISTAS.filter(a => a.name.toLowerCase().includes(q) || a.genre.toLowerCase().includes(q))
+    ? dbArtistas.filter(a => a.nombre?.toLowerCase().includes(q) || a.genero?.toLowerCase().includes(q))
     : [];
 
   const hasResults = canciones.length > 0 || artistas.length > 0;
   const showDropdown = open && q.length > 0;
+
+  const goToArtist = (nombre) => {
+    setOpen(false);
+    setQuery("");
+    router.push(`/artistas/${toSlug(nombre)}`);
+  };
 
   const openSearch = () => {
     setOpen(true);
@@ -363,11 +380,16 @@ function SearchBox() {
                 <>
                   <div className="search-section-label">Artistas</div>
                   {artistas.slice(0, 3).map((a, i) => (
-                    <div key={i} className="search-row">
-                      <Thumb img={a.img} accent={a.accent} isArtist />
+                    <div
+                      key={i}
+                      className="search-row"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => goToArtist(a.nombre)}
+                    >
+                      <Thumb img={null} accent="#1CF094" isArtist />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="search-row-title">{a.name}</div>
-                        <div className="search-row-sub">{a.genre} · {a.songs} canciones</div>
+                        <div className="search-row-title">{a.nombre}</div>
+                        <div className="search-row-sub">{a.genero}</div>
                       </div>
                     </div>
                   ))}
@@ -496,8 +518,9 @@ export default function Navbar() {
           {/* Centro: links + buscador */}
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <Link href={loggedIn ? "/inicio" : "/"} className={`nav-link${pathname === "/inicio" || pathname === "/" ? " nav-link--active" : ""}`}>Inicio</Link>
-            <Link href="/discos" className={`nav-link${pathname === "/discos" ? " nav-link--active" : ""}`}>Discos</Link>
-            <Link href="/faq" className={`nav-link${pathname === "/faq" ? " nav-link--active" : ""}`}>FAQ</Link>
+            {!loggedIn && (
+              <Link href="/faq" className={`nav-link${pathname === "/faq" ? " nav-link--active" : ""}`}>FAQ</Link>
+            )}
             {loggedIn && (
               <>
                 <Link href="/configuracion" className={`nav-link${pathname === "/configuracion" ? " nav-link--active" : ""}`}>Configuración</Link>

@@ -177,7 +177,7 @@ export default function MusicPlayer() {
                     {track.title}
                   </div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
-                    <Link href={`/artistas/${toSlug(track.artist)}`} style={{ color: "inherit", textDecoration: "none" }}>{track.artist}</Link>
+                    <Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link">{track.artist}</Link>
                   </div>
                 </div>
                 <button className="player-ctrl-btn" style={{ marginLeft: "4px" }}>

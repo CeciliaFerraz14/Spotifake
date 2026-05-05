@@ -94,4 +94,16 @@ body {
   opacity: 1;
 }
 
+.artist-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  cursor: pointer;
+}
+
+.artist-link:hover {
+  color: #ffffff !important;
+  text-decoration: underline;
+}
+
 
