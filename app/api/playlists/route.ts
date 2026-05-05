@@ -8,12 +8,22 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('playlists')
-    .select('id, nombre, accent, bg, created_at')
+    .select('id, nombre, accent, bg, created_at, playlist_canciones(count)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  const result = (data ?? []).map((pl: any) => ({
+    id: pl.id,
+    nombre: pl.nombre,
+    accent: pl.accent,
+    bg: pl.bg,
+    created_at: pl.created_at,
+    canciones: pl.playlist_canciones?.[0]?.count ?? 0,
+  }));
+
+  return NextResponse.json(result);
 }
 
 export async function POST(request: Request) {
@@ -30,5 +40,5 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json({ ...data, canciones: 0 });
 }
