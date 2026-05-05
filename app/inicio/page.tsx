@@ -247,23 +247,7 @@ const css = `
   }
 `;
 
-/* ── datos mock ── */
-const LIBRARY: (Track & { icon: string; img?: string })[] = [
-  { title: "OK Computer",      artist: "Radiohead",        accent: "#6e2fff", icon: "♫", img: "/images/caratula1.jpg", duration: 256 },
-  { title: "Nevermind",        artist: "Nirvana",           accent: "#ff3c3c", icon: "♪", img: "/images/caratula2.jpg", duration: 198 },
-  { title: "In Rainbows",      artist: "Radiohead",         accent: "#1CF094", icon: "♬", img: "/images/caratula3.jpg", duration: 222 },
-  { title: "Is This It",       artist: "The Strokes",       accent: "#ff9a00", icon: "♩", img: "/images/caratula4.jpg", duration: 194 },
-  { title: "AM",               artist: "Arctic Monkeys",    accent: "#00d4ff", icon: "♫", img: "/images/caratula5.png", duration: 212 },
-  { title: "Tranquility Base", artist: "Arctic Monkeys",    accent: "#ff6ef7", icon: "♬", img: "/images/chil.jpg", duration: 241 },
-];
-
-const PLAYLISTS = [
-  { id: 1, name: "DARK MATTER", songs: 41, accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)",  img: "/images/playñist1.jpg" },
-  { id: 2, name: "NIGHT DRIVE", songs: 32, accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)", img: "/images/playlist2.jpg" },
-  { id: 3, name: "CHILL WAVE",  songs: 28, accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)", img: "/images/playlist3.jpg" },
-  { id: 4, name: "EUPHORIA",    songs: 55, accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)", img: "/images/Portada4.jpg" },
-  { id: 5, name: "SOLAR FLARE", songs: 36, accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)", img: "/images/playlisst5.jpg" },
-];
+const ACCENTS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c"];
 
 const RELEASES: (Track & { img: string | null; tag: string; tagColor: string })[] = [
   { title: "REGU",           artist: "The Synthwave Collective", accent: "#1CF094", duration: 218, img: "/images/Portada_1.jpg", tag: "NUEVO",       tagColor: "#1CF094" },
@@ -379,7 +363,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number };
 
-type UserPlaylist = { id: string; nombre: string; accent: string };
+type UserPlaylist = { id: string; nombre: string; accent: string; bg: string; canciones?: number };
+type Artista = { nombre: string; genero: string; id_artista?: string; id?: string };
 
 export default function InicioPage() {
   const { playTrack } = usePlayer();
@@ -398,6 +383,7 @@ export default function InicioPage() {
 
   const [likedSet, setLikedSet]         = useState<Set<string>>(new Set());
   const [userPlaylists, setUserPlaylists] = useState<UserPlaylist[]>([]);
+  const [artistas, setArtistas]         = useState<Artista[]>([]);
   const [addModal, setAddModal]         = useState<Track | null>(null);
   const [addFeedback, setAddFeedback]   = useState<string | null>(null);
 
@@ -457,9 +443,10 @@ export default function InicioPage() {
       const photo = u.user_metadata?.avatar_url ?? null;
       setUser({ name, email: u.email ?? "", photo });
 
-      const [likesRes, plRes] = await Promise.all([
+      const [likesRes, plRes, artistasRes] = await Promise.all([
         fetch('/api/likes'),
         fetch('/api/playlists'),
+        fetch('/api/artista'),
       ]);
       if (likesRes.ok) {
         const data = await likesRes.json();
@@ -470,6 +457,10 @@ export default function InicioPage() {
       if (plRes.ok) {
         const data = await plRes.json();
         if (Array.isArray(data)) setUserPlaylists(data);
+      }
+      if (artistasRes.ok) {
+        const data = await artistasRes.json();
+        if (Array.isArray(data)) setArtistas(data);
       }
     })();
   }, []);
@@ -600,72 +591,80 @@ export default function InicioPage() {
           </div>
         </div>
 
-        {/* ── Mi Biblioteca ── */}
+        {/* ── Artistas ── */}
         <section style={{ marginBottom: "44px", animation: mounted ? "fade-in-up 0.6s ease 0.1s both" : "none" }}>
-          <SectionTitle>Mi Biblioteca</SectionTitle>
+          <SectionTitle>Artistas</SectionTitle>
           <div className="card-grid" style={{ marginTop: "16px" }}>
-            {LIBRARY.map((item, i) => (
-              <div key={i} className="spark-host" style={{
-                flex: "1 1 140px", minWidth: "130px", maxWidth: "200px",
-                animation: `float-item ${2.8 + i * 0.15}s ease-in-out ${i * 0.42}s infinite`,
-              }}>
-                {(sparkMap[`lib-${i}`] ?? []).map(s => (
-                  <div key={s.id} style={{
-                    position: 'absolute', left: s.x, top: s.y,
-                    width: s.size, height: s.size, borderRadius: '50%',
-                    background: s.color,
-                    boxShadow: `0 0 ${s.size * 2}px ${s.color}, 0 0 ${s.size * 4}px ${s.color}88`,
-                    pointerEvents: 'none', zIndex: 30,
-                    animation: 'spark-out 0.65s ease-out forwards',
-                    ['--dx' as string]: `${s.dx}px`,
-                    ['--dy' as string]: `${s.dy}px`,
-                  } as React.CSSProperties} />
-                ))}
-                <div
-                  className="dash-card wave-card glow-pulse-card"
-                  style={{
-                    padding: "16px 14px",
-                    ['--glow-color' as string]: `${item.accent}66`,
-                    ['--glow-border' as string]: `${item.accent}44`,
-                    ['--streak-delay' as string]: `${i * 0.42}s`,
-                    animationDuration: `${2.4 + i * 0.2}s`,
-                    animationDelay: `${i * 0.42}s`,
-                  } as React.CSSProperties}
-                  onClick={() => playTrack(item, LIBRARY)}
-                  onMouseEnter={(e) => spawnSparks(`lib-${i}`, e, item.accent ?? "#1CF094")}
-                >
-                  <div style={{
-                    width: "64px", height: "64px", borderRadius: "12px", marginBottom: "12px",
-                    background: `radial-gradient(circle at 35% 35%, ${item.accent}55 0%, ${item.accent}22 60%, transparent 100%)`,
-                    border: `1px solid ${item.accent}33`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "2rem", color: item.accent,
-                    overflow: "hidden", flexShrink: 0,
-                  }}>
-                    {item.img
-                      ? <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : item.icon
-                    }
+            {artistas.length === 0 ? (
+              <p style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-nunito), sans-serif", padding: "16px 0" }}>
+                Cargando artistas…
+              </p>
+            ) : artistas.map((a, i) => {
+              const accent = ACCENTS[i % ACCENTS.length];
+              return (
+                <div key={i} className="spark-host" style={{
+                  flex: "1 1 140px", minWidth: "130px", maxWidth: "200px",
+                  animation: `float-item ${2.8 + i * 0.15}s ease-in-out ${i * 0.42}s infinite`,
+                }}>
+                  {(sparkMap[`art-${i}`] ?? []).map(s => (
+                    <div key={s.id} style={{
+                      position: 'absolute', left: s.x, top: s.y,
+                      width: s.size, height: s.size, borderRadius: '50%',
+                      background: s.color,
+                      boxShadow: `0 0 ${s.size * 2}px ${s.color}, 0 0 ${s.size * 4}px ${s.color}88`,
+                      pointerEvents: 'none', zIndex: 30,
+                      animation: 'spark-out 0.65s ease-out forwards',
+                      ['--dx' as string]: `${s.dx}px`,
+                      ['--dy' as string]: `${s.dy}px`,
+                    } as React.CSSProperties} />
+                  ))}
+                  <div
+                    className="dash-card wave-card glow-pulse-card"
+                    style={{
+                      padding: "16px 14px",
+                      ['--glow-color' as string]: `${accent}66`,
+                      ['--glow-border' as string]: `${accent}44`,
+                      ['--streak-delay' as string]: `${i * 0.42}s`,
+                      animationDuration: `${2.4 + i * 0.2}s`,
+                      animationDelay: `${i * 0.42}s`,
+                    } as React.CSSProperties}
+                    onClick={() => router.push(`/artistas/${toSlug(a.nombre)}`)}
+                    onMouseEnter={(e) => spawnSparks(`art-${i}`, e, accent)}
+                  >
+                    <div style={{
+                      width: "64px", height: "64px", borderRadius: "50%", marginBottom: "12px",
+                      background: `radial-gradient(circle at 35% 35%, ${accent}55 0%, ${accent}22 60%, transparent 100%)`,
+                      border: `2px solid ${accent}44`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: "1.8rem", color: accent, flexShrink: 0,
+                    }}>
+                      ♫
+                    </div>
+                    <div style={{ fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "white", marginBottom: "3px", lineHeight: 1.2 }}>
+                      {a.nombre}
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
+                      {a.genero}
+                    </div>
+                    <button className="play-btn" style={{ marginTop: "10px" }}><PlayIcon /></button>
                   </div>
-                  <div style={{ fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "white", marginBottom: "3px", lineHeight: 1.2 }}>
-                    {item.title}
-                  </div>
-                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
-                    <Link href={`/artistas/${toSlug(item.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{item.artist}</Link>
-                  </div>
-                  <button className="play-btn" style={{ marginTop: "10px" }}><PlayIcon /></button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
-        {/* ── Playlists más escuchadas ── */}
+        {/* ── Mis Playlists ── */}
         <section style={{ marginBottom: "44px", animation: mounted ? "fade-in-up 0.6s ease 0.18s both" : "none" }}>
-          <SectionTitle>Playlists más escuchadas</SectionTitle>
+          <SectionTitle>Mis Playlists</SectionTitle>
           <div className="card-grid" style={{ marginTop: "16px" }}>
-            {PLAYLISTS.map((pl, i) => (
-              <div key={i} className="spark-host" style={{
+            {userPlaylists.length === 0 ? (
+              <p style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-nunito), sans-serif", padding: "16px 0" }}>
+                Aún no tienes playlists.{" "}
+                <span style={{ color: "#1CF094", cursor: "pointer" }} onClick={() => router.push("/playlists")}>Crear una</span>
+              </p>
+            ) : userPlaylists.map((pl, i) => (
+              <div key={pl.id} className="spark-host" style={{
                 flex: "1 1 160px", minWidth: "150px", maxWidth: "220px",
                 animation: `float-item ${3 + i * 0.12}s ease-in-out ${i * 0.5}s infinite`,
               }}>
@@ -692,17 +691,14 @@ export default function InicioPage() {
                     animationDelay: `${i * 0.5}s`,
                   } as React.CSSProperties}
                   onMouseEnter={(e) => spawnSparks(`pl-${i}`, e, pl.accent)}
-                  onClick={() => router.push(`/playlist-publica/${pl.id}`)}
+                  onClick={() => router.push(`/playlists/${pl.id}`)}
                 >
                   <div style={{
-                    height: "100px", background: pl.bg,
+                    height: "100px", background: pl.bg || `linear-gradient(145deg,${pl.accent}22,transparent)`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     position: "relative", overflow: "hidden",
                   }}>
-                    {pl.img
-                      ? <img src={pl.img} alt={pl.name} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
-                      : <Vinyl accent={pl.accent} size={64} />
-                    }
+                    <Vinyl accent={pl.accent} size={64} />
                     <div style={{ position: "absolute", bottom: "8px", right: "10px", zIndex: 1 }}>
                       <button className="play-btn" onClick={e => e.stopPropagation()}><PlayIcon /></button>
                     </div>
@@ -711,9 +707,10 @@ export default function InicioPage() {
                     <div style={{
                       fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900,
                       fontSize: "0.8rem", color: "white", letterSpacing: "0.5px",
-                    }}>{pl.name}</div>
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    }}>{pl.nombre}</div>
                     <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif", marginTop: "3px" }}>
-                      {pl.songs} canciones
+                      {pl.canciones === 0 ? "Sin canciones" : `${pl.canciones ?? 0} canciones`}
                     </div>
                   </div>
                 </div>
