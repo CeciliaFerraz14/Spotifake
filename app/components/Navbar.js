@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
@@ -16,6 +16,15 @@ const navCss = `
   @keyframes nav-eq5 { 0%,100%{ height:7px  } 35%{ height:19px } 65%{ height:26px } 90%{ height:6px  } }
   @keyframes nav-eq6 { 0%,100%{ height:14px } 20%{ height:6px  } 50%{ height:24px } 70%{ height:9px  } }
   @keyframes nav-eq7 { 0%,100%{ height:8px  } 40%{ height:28px } 70%{ height:13px } 90%{ height:20px } }
+
+  @keyframes search-expand {
+    from { width: 36px; opacity: 0.6; }
+    to   { width: 280px; opacity: 1; }
+  }
+  @keyframes dropdown-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
 
   .nav-eq-wrap {
     display: flex;
@@ -41,6 +50,7 @@ const navCss = `
     transition: color 0.2s, background 0.2s;
     font-family: var(--font-nunito), 'Trebuchet MS', sans-serif;
     letter-spacing: 0.3px;
+    white-space: nowrap;
   }
   .nav-link:hover {
     color: #1CF094;
@@ -80,6 +90,135 @@ const navCss = `
     animation: shimmer-nav 4s linear infinite;
     opacity: 0.8;
   }
+
+  /* ── Buscador ── */
+  .search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50px;
+    padding: 6px 14px 6px 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, width 0.35s cubic-bezier(0.4,0,0.2,1);
+    overflow: hidden;
+    width: 36px;
+    min-width: 36px;
+  }
+  .search-pill.open {
+    width: 280px;
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(28,240,148,0.45);
+    box-shadow: 0 0 0 3px rgba(28,240,148,0.08);
+  }
+  .search-pill:hover:not(.open) {
+    border-color: rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.09);
+  }
+  .search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-size: 0.85rem;
+    font-family: var(--font-nunito), sans-serif;
+    width: 0;
+    opacity: 0;
+    transition: width 0.3s, opacity 0.3s;
+    pointer-events: none;
+  }
+  .search-pill.open .search-input {
+    width: 100%;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .search-input::placeholder {
+    color: rgba(255,255,255,0.3);
+  }
+  .search-clear {
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; flex-shrink: 0;
+    transition: color 0.15s;
+    font-size: 1rem; line-height: 1;
+  }
+  .search-clear:hover { color: white; }
+
+  /* Dropdown */
+  .search-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 360px;
+    background: rgba(10,15,26,0.97);
+    border: 1px solid rgba(28,240,148,0.18);
+    border-radius: 16px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04);
+    overflow: hidden;
+    z-index: 2000;
+    animation: dropdown-in 0.22s cubic-bezier(0.34,1.2,0.64,1) both;
+    backdrop-filter: blur(20px);
+  }
+  .search-section-label {
+    font-size: 0.65rem; font-weight: 800; letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    font-family: var(--font-nunito), sans-serif;
+    padding: 12px 16px 6px;
+  }
+  .search-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 0;
+  }
+  .search-row:hover {
+    background: rgba(28,240,148,0.07);
+  }
+  .search-row:hover .search-row-title {
+    color: #1CF094;
+  }
+  .search-row-title {
+    color: white; font-size: 0.85rem; font-weight: 700;
+    font-family: var(--font-nunito), sans-serif;
+    transition: color 0.15s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .search-row-sub {
+    color: rgba(255,255,255,0.38); font-size: 0.72rem;
+    font-family: Arial, sans-serif;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .search-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 4px 0;
+  }
+  .search-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: rgba(255,255,255,0.3);
+    font-family: var(--font-nunito), sans-serif;
+    font-size: 0.85rem;
+  }
+  .search-thumb {
+    width: 38px; height: 38px; border-radius: 8px;
+    object-fit: cover; flex-shrink: 0;
+    background: rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .search-thumb-artist {
+    border-radius: 50% !important;
+  }
 `;
 
 const eqBars = [
@@ -94,6 +233,193 @@ const eqBars = [
   { anim: "nav-eq3", dur: "0.74s", delay: "0.06s" },
   { anim: "nav-eq5", dur: "0.84s", delay: "0.24s" },
 ];
+
+/* ── Datos mock para búsqueda ── */
+const CANCIONES = [
+  { title: "Paranoid Android",  artist: "Radiohead",       duration: "6:23", accent: "#1CF094", img: "/images/caratula1.jpg" },
+  { title: "Last Nite",         artist: "The Strokes",      duration: "3:14", accent: "#ff9a00", img: "/images/caratula4.jpg" },
+  { title: "R U Mine?",         artist: "Arctic Monkeys",   duration: "3:22", accent: "#00d4ff", img: "/images/caratula5.png" },
+  { title: "Come as You Are",   artist: "Nirvana",          duration: "3:38", accent: "#ff3c3c", img: "/images/caratula2.jpg" },
+  { title: "Creep",             artist: "Radiohead",        duration: "3:58", accent: "#6e2fff", img: "/images/caratula1.jpg" },
+  { title: "Blinding Lights",   artist: "The Weeknd",       duration: "3:20", accent: "#ff6ef7", img: "/images/Portada4.jpg" },
+  { title: "Flowers",           artist: "Miley Cyrus",      duration: "3:21", accent: "#ff9a00", img: null },
+  { title: "Anti-Hero",         artist: "Taylor Swift",     duration: "3:21", accent: "#1CF094", img: null },
+  { title: "In Rainbows",       artist: "Radiohead",        duration: "3:42", accent: "#1CF094", img: "/images/caratula3.jpg" },
+  { title: "AM",                artist: "Arctic Monkeys",   duration: "3:32", accent: "#00d4ff", img: "/images/caratula5.png" },
+];
+
+const ARTISTAS = [
+  { name: "Radiohead",       genre: "Rock alternativo",  songs: 48, accent: "#1CF094", img: "/images/caratula1.jpg" },
+  { name: "Arctic Monkeys",  genre: "Indie rock",         songs: 35, accent: "#00d4ff", img: "/images/caratula5.png" },
+  { name: "Nirvana",         genre: "Grunge",             songs: 29, accent: "#ff3c3c", img: "/images/caratula2.jpg" },
+  { name: "The Strokes",     genre: "Indie rock",         songs: 31, accent: "#ff9a00", img: "/images/caratula4.jpg" },
+  { name: "The Weeknd",      genre: "R&B / Pop",          songs: 52, accent: "#ff6ef7", img: "/images/Portada4.jpg" },
+  { name: "Taylor Swift",    genre: "Pop",                songs: 67, accent: "#a3ff47", img: null },
+  { name: "Miley Cyrus",     genre: "Pop / Rock",         songs: 44, accent: "#ff9a00", img: null },
+];
+
+function SearchIcon({ size = 15, color = "rgba(255,255,255,0.55)" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0 }}>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16.5" y1="16.5" x2="22" y2="22" />
+    </svg>
+  );
+}
+
+function Thumb({ img, accent, isArtist = false }) {
+  return (
+    <div className={`search-thumb${isArtist ? " search-thumb-artist" : ""}`}
+      style={{ background: img ? undefined : `${accent}22`, border: `1px solid ${accent}33` }}>
+      {img
+        ? <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ fontSize: "1rem", color: accent }}>{isArtist ? "♪" : "♫"}</span>
+      }
+    </div>
+  );
+}
+
+function SearchBox() {
+  const [open, setOpen]     = useState(false);
+  const [query, setQuery]   = useState("");
+  const wrapRef             = useRef(null);
+  const inputRef            = useRef(null);
+
+  const q = query.trim().toLowerCase();
+
+  const canciones = q
+    ? CANCIONES.filter(c => c.title.toLowerCase().includes(q) || c.artist.toLowerCase().includes(q))
+    : [];
+  const artistas = q
+    ? ARTISTAS.filter(a => a.name.toLowerCase().includes(q) || a.genre.toLowerCase().includes(q))
+    : [];
+
+  const hasResults = canciones.length > 0 || artistas.length > 0;
+  const showDropdown = open && q.length > 0;
+
+  const openSearch = () => {
+    setOpen(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const clearSearch = (e) => {
+    e.stopPropagation();
+    setQuery("");
+    inputRef.current?.focus();
+  };
+
+  // Cerrar al click fuera
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") { setOpen(false); setQuery(""); }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
+  return (
+    <div className="search-wrap" ref={wrapRef}>
+      <div
+        className={`search-pill${open ? " open" : ""}`}
+        onClick={!open ? openSearch : undefined}
+      >
+        <SearchIcon color={open ? "#1CF094" : "rgba(255,255,255,0.55)"} size={15} />
+        <input
+          ref={inputRef}
+          className="search-input"
+          placeholder="Artistas, canciones…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          tabIndex={open ? 0 : -1}
+        />
+        {open && query && (
+          <button className="search-clear" onClick={clearSearch}>×</button>
+        )}
+      </div>
+
+      {showDropdown && (
+        <div className="search-dropdown">
+          {!hasResults ? (
+            <div className="search-empty">
+              Sin resultados para <strong style={{ color: "rgba(255,255,255,0.6)" }}>"{query}"</strong>
+            </div>
+          ) : (
+            <>
+              {artistas.length > 0 && (
+                <>
+                  <div className="search-section-label">Artistas</div>
+                  {artistas.slice(0, 3).map((a, i) => (
+                    <div key={i} className="search-row">
+                      <Thumb img={a.img} accent={a.accent} isArtist />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="search-row-title">{a.name}</div>
+                        <div className="search-row-sub">{a.genre} · {a.songs} canciones</div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {artistas.length > 0 && canciones.length > 0 && (
+                <div className="search-divider" />
+              )}
+
+              {canciones.length > 0 && (
+                <>
+                  <div className="search-section-label">Canciones</div>
+                  {canciones.slice(0, 5).map((c, i) => (
+                    <div key={i} className="search-row">
+                      <Thumb img={c.img} accent={c.accent} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="search-row-title">{c.title}</div>
+                        <div className="search-row-sub">{c.artist}</div>
+                      </div>
+                      <div style={{
+                        color: "rgba(255,255,255,0.25)", fontSize: "0.72rem",
+                        fontFamily: "Arial, sans-serif", flexShrink: 0,
+                      }}>
+                        {c.duration}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Footer del dropdown */}
+              <div style={{
+                padding: "10px 16px",
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                display: "flex", alignItems: "center", gap: "6px",
+              }}>
+                <SearchIcon size={12} color="rgba(28,240,148,0.6)" />
+                <span style={{
+                  color: "rgba(255,255,255,0.3)", fontSize: "0.72rem",
+                  fontFamily: "var(--font-nunito), sans-serif",
+                }}>
+                  {canciones.length + artistas.length} resultado{canciones.length + artistas.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -167,7 +493,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Centro: links */}
+          {/* Centro: links + buscador */}
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <Link href={loggedIn ? "/inicio" : "/"} className={`nav-link${pathname === "/inicio" || pathname === "/" ? " nav-link--active" : ""}`}>Inicio</Link>
             <Link href="/discos" className={`nav-link${pathname === "/discos" ? " nav-link--active" : ""}`}>Discos</Link>
@@ -178,9 +504,15 @@ export default function Navbar() {
                 <Link href="/playlists" className={`nav-link${pathname === "/playlists" ? " nav-link--active" : ""}`}>Playlists</Link>
               </>
             )}
+
+            {/* Separador */}
+            <div style={{ width: "1px", height: "18px", background: "rgba(255,255,255,0.1)", margin: "0 6px", flexShrink: 0 }} />
+
+            {/* Buscador */}
+            <SearchBox />
           </div>
 
-          {/* Derecha: botón */}
+          {/* Derecha: botón sesión */}
           <div style={{ flexShrink: 0 }}>
             {loggedIn ? (
               <button onClick={handleLogout} className="nav-enter-btn" style={{ border: "none", cursor: "pointer" }}>
