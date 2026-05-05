@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
-import { PLAYLISTS } from "../playlistsData";
+import { PLAYLISTS_PUBLICAS } from "../playlistsPublicasData";
 
 const css = `
   @keyframes fade-in-up {
@@ -13,10 +13,6 @@ const css = `
   @keyframes spin-vinyl-slow {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
-  }
-  @keyframes shimmer-cover {
-    0%   { background-position: -200% center; }
-    100% { background-position:  200% center; }
   }
   @keyframes eq-bar {
     0%, 100% { transform: scaleY(0.3); }
@@ -33,29 +29,20 @@ const css = `
     cursor: pointer;
     transition: background 0.18s;
   }
-  .track-row:hover {
-    background: rgba(255,255,255,0.07);
-  }
-  .track-row.active {
-    background: rgba(28,240,148,0.08);
-  }
+  .track-row:hover { background: rgba(255,255,255,0.07); }
+  .track-row.active { background: rgba(28,240,148,0.08); }
 
   .back-btn {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 50px;
-    padding: 8px 18px;
-    color: rgba(255,255,255,0.7);
-    cursor: pointer;
+    border-radius: 50px; padding: 8px 18px;
+    color: rgba(255,255,255,0.7); cursor: pointer;
     font-family: var(--font-nunito), sans-serif;
     font-weight: 700; font-size: 0.82rem;
     transition: background 0.18s, color 0.18s;
   }
-  .back-btn:hover {
-    background: rgba(255,255,255,0.11);
-    color: white;
-  }
+  .back-btn:hover { background: rgba(255,255,255,0.11); color: white; }
 
   .play-all-btn {
     display: flex; align-items: center; gap: 8px;
@@ -76,24 +63,15 @@ const css = `
     display: flex; align-items: center; gap: 8px;
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 50px;
-    padding: 11px 24px; cursor: pointer;
+    border-radius: 50px; padding: 11px 24px; cursor: pointer;
     color: rgba(255,255,255,0.8); font-weight: 700; font-size: 0.88rem;
     font-family: var(--font-nunito), sans-serif;
     transition: background 0.18s, color 0.18s;
   }
-  .shuffle-btn:hover {
-    background: rgba(255,255,255,0.11);
-    color: white;
-  }
+  .shuffle-btn:hover { background: rgba(255,255,255,0.11); color: white; }
 
-  .eq-bars {
-    display: flex; align-items: flex-end; gap: 2px; height: 14px;
-  }
-  .eq-bar {
-    width: 3px; border-radius: 2px;
-    transform-origin: bottom;
-  }
+  .eq-bars { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+  .eq-bar { width: 3px; border-radius: 2px; transform-origin: bottom; }
 `;
 
 function fmt(s: number) {
@@ -126,21 +104,16 @@ function EqBars({ accent }: { accent: string }) {
   return (
     <div className="eq-bars">
       {[1, 2, 3].map((_, i) => (
-        <div
-          key={i}
-          className="eq-bar"
-          style={{
-            height: "100%",
-            background: accent,
-            animation: `eq-bar ${0.6 + i * 0.15}s ease-in-out ${i * 0.1}s infinite`,
-          }}
-        />
+        <div key={i} className="eq-bar" style={{
+          height: "100%", background: accent,
+          animation: `eq-bar ${0.6 + i * 0.15}s ease-in-out ${i * 0.1}s infinite`,
+        }} />
       ))}
     </div>
   );
 }
 
-export default function PlaylistDetailPage() {
+export default function PlaylistPublicaPage() {
   const router   = useRouter();
   const params   = useParams();
   const supabase = createClient();
@@ -149,8 +122,8 @@ export default function PlaylistDetailPage() {
   const [cargando, setCargando] = useState(true);
   const [mounted,  setMounted]  = useState(false);
 
-  const id = Number(params.id_playlist);
-  const playlist = PLAYLISTS.find(p => p.id === id);
+  const id = Number(params.id);
+  const playlist = PLAYLISTS_PUBLICAS.find(p => p.id === id);
 
   useEffect(() => {
     setMounted(true);
@@ -207,11 +180,11 @@ export default function PlaylistDetailPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            Mis playlists
+            Inicio
           </button>
         </div>
 
-        {/* Cabecera: portada + info */}
+        {/* Cabecera */}
         <div style={{
           display: "flex", alignItems: "flex-end", gap: "32px",
           marginBottom: "40px", flexWrap: "wrap",
@@ -220,13 +193,11 @@ export default function PlaylistDetailPage() {
           {/* Portada */}
           <div style={{
             width: 180, height: 180, borderRadius: "20px",
-            background: playlist.bg,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
+            overflow: "hidden", flexShrink: 0,
             boxShadow: `0 16px 60px ${playlist.accent}33`,
             border: `1px solid ${playlist.accent}22`,
           }}>
-            <Vinyl accent={playlist.accent} size={120} spinning={playing && playlist.tracks.some(t => t.title === currentTrack?.title)} />
+            <img src={playlist.img} alt={playlist.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
 
           {/* Info */}
@@ -237,7 +208,7 @@ export default function PlaylistDetailPage() {
               letterSpacing: "1px", textTransform: "uppercase",
               margin: "0 0 8px",
             }}>
-              Playlist
+              Playlist · {playlist.curator}
             </p>
             <h1 style={{
               margin: "0 0 10px",
@@ -247,7 +218,7 @@ export default function PlaylistDetailPage() {
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
               lineHeight: 1.1,
             }}>
-              {playlist.nombre}
+              {playlist.name}
             </h1>
             <p style={{
               color: "rgba(255,255,255,0.35)", fontSize: "0.82rem",
@@ -256,7 +227,6 @@ export default function PlaylistDetailPage() {
               {playlist.tracks.length} {playlist.tracks.length === 1 ? "canción" : "canciones"} · {fmt(totalDuration)}
             </p>
 
-            {/* Botones de acción */}
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               <button
                 className="play-all-btn"
@@ -280,10 +250,8 @@ export default function PlaylistDetailPage() {
 
         {/* Cabecera de la tabla */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "32px 1fr auto",
-          gap: "16px",
-          padding: "0 16px 10px",
+          display: "grid", gridTemplateColumns: "32px 1fr auto",
+          gap: "16px", padding: "0 16px 10px",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
           marginBottom: "8px",
           animation: mounted ? "fade-in-up 0.5s ease 0.1s both" : "none",
@@ -305,20 +273,19 @@ export default function PlaylistDetailPage() {
                 className={`track-row${isActive ? " active" : ""}`}
                 onClick={() => playTrack(t, playlist.tracks)}
               >
-                {/* Número / EQ */}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {isActive && playing
                     ? <EqBars accent={playlist.accent} />
                     : <span style={{
                         color: isActive ? playlist.accent : "rgba(255,255,255,0.3)",
-                        fontSize: "0.8rem", fontFamily: "Arial, sans-serif", fontWeight: isActive ? 700 : 400,
+                        fontSize: "0.8rem", fontFamily: "Arial, sans-serif",
+                        fontWeight: isActive ? 700 : 400,
                       }}>
                         {i + 1}
                       </span>
                   }
                 </div>
 
-                {/* Título + artista */}
                 <div style={{ minWidth: 0 }}>
                   <div style={{
                     color: isActive ? playlist.accent : "white",
@@ -329,19 +296,12 @@ export default function PlaylistDetailPage() {
                   }}>
                     {t.title}
                   </div>
-                  <div style={{
-                    color: "rgba(255,255,255,0.4)", fontSize: "0.75rem",
-                    fontFamily: "Arial, sans-serif", marginTop: "2px",
-                  }}>
+                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.75rem", fontFamily: "Arial, sans-serif", marginTop: "2px" }}>
                     {t.artist}
                   </div>
                 </div>
 
-                {/* Duración */}
-                <span style={{
-                  color: "rgba(255,255,255,0.35)", fontSize: "0.78rem",
-                  fontFamily: "Arial, sans-serif", flexShrink: 0,
-                }}>
+                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.78rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>
                   {fmt(t.duration ?? 0)}
                 </span>
               </div>

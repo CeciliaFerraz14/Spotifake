@@ -258,18 +258,18 @@ const LIBRARY: (Track & { icon: string; img?: string })[] = [
 ];
 
 const PLAYLISTS = [
-  { name: "DARK MATTER",  songs: 41, accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)",  img: "/images/playñist1.jpg" },
-  { name: "NIGHT DRIVE",  songs: 32, accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)", img: "/images/playlist2.jpg" },
-  { name: "CHILL WAVE",   songs: 28, accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)", img: "/images/playlist3.jpg" },
-  { name: "EUPHORIA",     songs: 55, accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)", img: "/images/Portada4.jpg" },
-  { name: "SOLAR FLARE",  songs: 36, accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)", img: "/images/playlisst5.jpg" },
+  { id: 1, name: "DARK MATTER", songs: 41, accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)",  img: "/images/playñist1.jpg" },
+  { id: 2, name: "NIGHT DRIVE", songs: 32, accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)", img: "/images/playlist2.jpg" },
+  { id: 3, name: "CHILL WAVE",  songs: 28, accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)", img: "/images/playlist3.jpg" },
+  { id: 4, name: "EUPHORIA",    songs: 55, accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)", img: "/images/Portada4.jpg" },
+  { id: 5, name: "SOLAR FLARE", songs: 36, accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)", img: "/images/playlisst5.jpg" },
 ];
 
-const RELEASES = [
-  { title: "REGU",          artist: "The Synthwave Collective", img: "/images/Portada_1.jpg", tag: "NUEVO",        tagColor: "#1CF094" },
-  { title: "Lluvia de Abril",artist: "Clara Montoya",           img: null, accent: "#6e2fff", tag: "HOY",          tagColor: "#a3ff47" },
-  { title: "Midnight Echo", artist: "Broken Orbit",             img: null, accent: "#ff6ef7", tag: "ESTA SEMANA",  tagColor: "#5eead4" },
-  { title: "Neon Pulse",    artist: "Synthwave Era",            img: null, accent: "#00d4ff", tag: "NUEVO",        tagColor: "#1CF094" },
+const RELEASES: (Track & { img: string | null; tag: string; tagColor: string })[] = [
+  { title: "REGU",           artist: "The Synthwave Collective", accent: "#1CF094", duration: 218, img: "/images/Portada_1.jpg", tag: "NUEVO",       tagColor: "#1CF094" },
+  { title: "Lluvia de Abril",artist: "Clara Montoya",            accent: "#6e2fff", duration: 195, img: null,                    tag: "HOY",         tagColor: "#a3ff47" },
+  { title: "Midnight Echo",  artist: "Broken Orbit",             accent: "#ff6ef7", duration: 241, img: null,                    tag: "ESTA SEMANA", tagColor: "#5eead4" },
+  { title: "Neon Pulse",     artist: "Synthwave Era",            accent: "#00d4ff", duration: 207, img: null,                    tag: "NUEVO",       tagColor: "#1CF094" },
 ];
 
 const MIX: (Track & { durationLabel: string })[] = [
@@ -631,6 +631,7 @@ export default function InicioPage() {
                     animationDelay: `${i * 0.5}s`,
                   } as React.CSSProperties}
                   onMouseEnter={(e) => spawnSparks(`pl-${i}`, e, pl.accent)}
+                  onClick={() => router.push(`/playlist-publica/${pl.id}`)}
                 >
                   <div style={{
                     height: "100px", background: pl.bg,
@@ -642,7 +643,7 @@ export default function InicioPage() {
                       : <Vinyl accent={pl.accent} size={64} />
                     }
                     <div style={{ position: "absolute", bottom: "8px", right: "10px", zIndex: 1 }}>
-                      <button className="play-btn"><PlayIcon /></button>
+                      <button className="play-btn" onClick={e => e.stopPropagation()}><PlayIcon /></button>
                     </div>
                   </div>
                   <div style={{ padding: "12px 14px" }}>
@@ -811,7 +812,7 @@ export default function InicioPage() {
           <SectionTitle>Nuevos lanzamientos</SectionTitle>
           <div className="scroll-row" style={{ marginTop: "16px" }}>
             {RELEASES.map((r, i) => (
-              <div key={i} className="dash-card" style={{ minWidth: "170px", overflow: "hidden", padding: 0 }}>
+              <div key={i} className="dash-card" style={{ minWidth: "170px", overflow: "hidden", padding: 0 }} onClick={() => playTrack(r, RELEASES)}>
                 {/* Portada */}
                 <div style={{
                   height: "120px", position: "relative", overflow: "hidden",
@@ -829,7 +830,7 @@ export default function InicioPage() {
                   }}>
                     {r.tag}
                   </span>
-                  <button className="play-btn" style={{ position: "absolute", bottom: "8px", right: "8px" }}>
+                  <button className="play-btn" style={{ position: "absolute", bottom: "8px", right: "8px" }} onClick={e => { e.stopPropagation(); playTrack(r, RELEASES); }}>
                     <PlayIcon />
                   </button>
                 </div>

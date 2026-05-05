@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { PLAYLISTS, Playlist } from "./playlistsData";
 
 const css = `
   @keyframes fade-in-up {
@@ -189,20 +190,6 @@ const COLOR_OPTIONS = [
   { accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)" },
 ];
 
-type Playlist = {
-  id: number;
-  nombre: string;
-  canciones: number;
-  accent: string;
-  bg: string;
-};
-
-const INITIAL_PLAYLISTS: Playlist[] = [
-  { id: 1, nombre: "Mis favoritas",  canciones: 12, accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)" },
-  { id: 2, nombre: "Para estudiar",  canciones: 8,  accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)" },
-  { id: 3, nombre: "Gym",            canciones: 20, accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)" },
-  { id: 4, nombre: "Viajes",         canciones: 15, accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)" },
-];
 
 type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number };
 
@@ -266,7 +253,7 @@ export default function PlaylistsPage() {
   const [user, setUser]           = useState<any>(null);
   const [cargando, setCargando]   = useState(true);
   const [mounted, setMounted]     = useState(false);
-  const [playlists, setPlaylists] = useState<Playlist[]>(INITIAL_PLAYLISTS);
+  const [playlists, setPlaylists] = useState<Playlist[]>(PLAYLISTS);
   const [sparkMap, setSparkMap]   = useState<Record<string, SparkItem[]>>({});
 
   // Modal estado
@@ -304,7 +291,7 @@ export default function PlaylistsPage() {
     const color = COLOR_OPTIONS[colorIdx];
     setPlaylists(prev => [
       ...prev,
-      { id: Date.now(), nombre, canciones: 0, accent: color.accent, bg: color.bg },
+      { id: Date.now(), nombre, canciones: 0, accent: color.accent, bg: color.bg, tracks: [] },
     ]);
     setNuevoNombre("");
     setColorIdx(0);
@@ -464,6 +451,7 @@ export default function PlaylistsPage() {
                       animationDelay: `${i * 0.5}s`,
                     } as React.CSSProperties}
                     onMouseEnter={e => spawnSparks(`pl-${i}`, e, pl.accent)}
+                    onClick={() => router.push(`/playlists/${pl.id}`)}
                   >
                     {/* Portada */}
                     <div style={{
@@ -480,7 +468,15 @@ export default function PlaylistsPage() {
                         pointerEvents: "none",
                       }} />
                       <div style={{ position: "absolute", bottom: "8px", right: "10px", zIndex: 2 }}>
-                        <button className="play-btn"><PlayIcon /></button>
+                        <button
+                          className="play-btn"
+                          onClick={e => {
+                            e.stopPropagation();
+                            router.push(`/playlists/${pl.id}`);
+                          }}
+                        >
+                          <PlayIcon />
+                        </button>
                       </div>
                     </div>
 
