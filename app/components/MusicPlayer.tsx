@@ -1,6 +1,9 @@
 "use client";
+import Link from "next/link";
 import { usePlayer } from "../context/PlayerContext";
 import { useState, useRef } from "react";
+
+const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
 const playerCss = `
   @keyframes shimmer-player {
@@ -174,7 +177,7 @@ export default function MusicPlayer() {
                     {track.title}
                   </div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
-                    {track.artist}
+                    <Link href={`/artistas/${toSlug(track.artist)}`} style={{ color: "inherit", textDecoration: "none" }}>{track.artist}</Link>
                   </div>
                 </div>
                 <button className="player-ctrl-btn" style={{ marginLeft: "4px" }}>

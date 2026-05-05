@@ -2,8 +2,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 import { usePlayer } from "@/app/context/PlayerContext";
 import type { Track } from "@/app/context/PlayerContext";
+
+// "Arctic Monkeys" → "arctic-monkeys"
+const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
 const css = `
   @keyframes shimmer-dash {
@@ -586,7 +590,7 @@ export default function InicioPage() {
                     {item.title}
                   </div>
                   <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
-                    {item.artist}
+                    <Link href={`/artistas/${toSlug(item.artist)}`} style={{ color: "inherit", textDecoration: "none" }} onClick={e => e.stopPropagation()}>{item.artist}</Link>
                   </div>
                   <button className="play-btn" style={{ marginTop: "10px" }}><PlayIcon /></button>
                 </div>
@@ -725,7 +729,7 @@ export default function InicioPage() {
                       <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {track.title}
                       </div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{track.artist}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} style={{ color: "inherit", textDecoration: "none" }} onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
@@ -791,7 +795,7 @@ export default function InicioPage() {
                       <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {h.title}
                       </div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{h.artist}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(h.artist)}`} style={{ color: "inherit", textDecoration: "none" }} onClick={e => e.stopPropagation()}>{h.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
@@ -833,7 +837,7 @@ export default function InicioPage() {
                   <div style={{ color: "white", fontWeight: 700, fontSize: "0.82rem", fontFamily: "var(--font-nunito), sans-serif", marginBottom: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {r.title}
                   </div>
-                  <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{r.artist}</div>
+                  <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(r.artist)}`} style={{ color: "inherit", textDecoration: "none" }} onClick={e => e.stopPropagation()}>{r.artist}</Link></div>
                 </div>
               </div>
             ))}
@@ -912,7 +916,7 @@ export default function InicioPage() {
                     }}>{i + 1}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{track.artist}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} style={{ color: "inherit", textDecoration: "none" }} onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
@@ -929,7 +933,7 @@ export default function InicioPage() {
                     <TrendIcon trend={h.trend} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.title}</div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>{h.artist}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(h.artist)}`} style={{ color: "inherit", textDecoration: "none" }} onClick={e => e.stopPropagation()}>{h.artist}</Link></div>
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
