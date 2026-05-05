@@ -584,8 +584,8 @@ export default function InicioPage() {
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
               {[
-                { label: "Guardadas", val: "128" },
-                { label: "Playlists", val: "12" },
+                { label: "Guardadas", val: String(likedSet.size) },
+                { label: "Playlists", val: String(userPlaylists.length) },
               ].map(s => (
                 <div key={s.label} style={{
                   background: "rgba(255,255,255,0.04)",
