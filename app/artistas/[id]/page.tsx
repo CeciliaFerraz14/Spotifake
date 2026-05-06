@@ -10,7 +10,7 @@ function fmtDuracion(seg: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-type Artista = { nombre: string; genero: string; id_artista?: string; id?: string };
+type Artista = { nombre: string; genero: string; id_artista?: string; id?: string; imagen?: string };
 type Cancion = { id: string; titulo: string; duracion: number; num_reproducciones: number };
 
 export default function ArtistaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -58,13 +58,32 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
         borderRadius: "20px",
         padding: "32px",
         marginBottom: "20px",
+        display: "flex",
+        alignItems: "center",
+        gap: "24px",
       }}>
-        <h1 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "2rem", margin: "0 0 8px" }}>
-          {artista.nombre}
-        </h1>
-        <p style={{ color: "rgba(255,255,255,0.45)", margin: 0 }}>
-          {artista.genero}
-        </p>
+        {artista.imagen && (
+          <img
+            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/artistas/${artista.imagen}`}
+            alt={artista.nombre}
+            style={{
+              width: "100px",
+              height: "100px",
+              borderRadius: "50%",
+              objectFit: "cover",
+              flexShrink: 0,
+              border: "2px solid rgba(255,255,255,0.12)",
+            }}
+          />
+        )}
+        <div>
+          <h1 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "2rem", margin: "0 0 8px" }}>
+            {artista.nombre}
+          </h1>
+          <p style={{ color: "rgba(255,255,255,0.45)", margin: 0 }}>
+            {artista.genero}
+          </p>
+        </div>
       </div>
 
       {/* Lista de canciones */}
