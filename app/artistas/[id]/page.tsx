@@ -92,7 +92,7 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
             {artista.nombre}
           </h1>
           {artista.descripcion && (
-            <p style={{ color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-nunito)", fontSize: "0.85rem", lineHeight: 1.6, margin: 0 }}>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-nunito)", fontSize: "0.85rem", lineHeight: 1.6, margin: 0, textAlign: "justify" }}>
               {artista.descripcion}
             </p>
           )}
