@@ -12,7 +12,7 @@ function fmtDuracion(seg: number) {
 }
 
 type Artista = { nombre: string; genero: string; descripcion?: string; id?: string; imagen?: string };
-type Cancion  = { id: string; titulo: string; duracion: number; num_reproducciones: number };
+type Cancion  = { id: string; titulo: string; duracion: number; num_reproducciones: number; caratula?: string };
 type Album    = { id: string; titulo: string; año: string; canciones: number; caratula?: string };
 
 export default function ArtistaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -169,6 +169,11 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
                 <span style={{ color: "rgba(255,255,255,0.25)", fontFamily: "var(--font-nunito)", width: "20px", textAlign: "right", flexShrink: 0 }}>
                   {i + 1}
                 </span>
+                {c.caratula ? (
+                  <img src={c.caratula} alt={c.titulo} style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "rgba(255,255,255,0.07)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", color: "rgba(255,255,255,0.2)" }}>♪</div>
+                )}
                 <span style={{ color: "white", fontFamily: "var(--font-nunito)", flex: 1 }}>
                   {c.titulo}
                 </span>

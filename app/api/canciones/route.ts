@@ -12,32 +12,40 @@ export async function GET(request: Request) {
   const limit      = searchParams.get('limit');
 
   if (artista_id) {
-    // 1. Álbumes del artista
+    // 1. Álbumes del artista (con carátula)
     const { data: albums, error: eAlbums } = await supabase
       .from('albums')
-      .select('id_album')
+      .select('id_album, caratula')
       .eq('id_artista_fk', artista_id);
 
     if (eAlbums) return NextResponse.json({ error: eAlbums.message }, { status: 500 });
     if (!albums?.length) return NextResponse.json([]);
 
     const albumIds = albums.map((a: any) => a.id_album);
+    const albumCaratulaMap = Object.fromEntries(albums.map((a: any) => [a.id_album, a.caratula]));
 
     // 2. Canciones de esos álbumes
     const { data, error } = await supabase
       .from('canciones')
-      .select('id_cancion, titulo, duracion, num_reproducciones')
+      .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk')
       .in('id_album_fk', albumIds)
       .order('num_reproducciones', { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    return NextResponse.json((data ?? []).map((c: any) => ({
-      id: c.id_cancion,
-      titulo: c.titulo,
-      duracion: c.duracion,
-      num_reproducciones: c.num_reproducciones,
-    })));
+    return NextResponse.json((data ?? []).map((c: any) => {
+      const caratulaPath = albumCaratulaMap[c.id_album_fk];
+      const caratula = caratulaPath
+        ? supabase.storage.from('caratulas').getPublicUrl(caratulaPath).data.publicUrl
+        : null;
+      return {
+        id: c.id_cancion,
+        titulo: c.titulo,
+        duracion: c.duracion,
+        num_reproducciones: c.num_reproducciones,
+        caratula,
+      };
+    }));
   }
 
   // Canciones con nombre del artista (top o mix)
@@ -55,11 +63,11 @@ export async function GET(request: Request) {
   if (eCanciones) return NextResponse.json({ error: eCanciones.message }, { status: 500 });
   if (!canciones?.length) return NextResponse.json([]);
 
-  // Álbumes de esas canciones
+  // Álbumes de esas canciones (con carátula)
   const albumIds = [...new Set(canciones.map((c: any) => c.id_album_fk))];
   const { data: albums } = await supabase
     .from('albums')
-    .select('id_album, id_artista_fk')
+    .select('id_album, id_artista_fk, caratula')
     .in('id_album', albumIds);
 
   // Artistas de esos álbumes
@@ -69,14 +77,22 @@ export async function GET(request: Request) {
     .select('id, nombre')
     .in('id', artistaIds);
 
-  const albumMap = Object.fromEntries((albums ?? []).map((a: any) => [a.id_album, a.id_artista_fk]));
+  const albumMap = Object.fromEntries((albums ?? []).map((a: any) => [a.id_album, a]));
   const artistaMap = Object.fromEntries((artistas ?? []).map((a: any) => [a.id, a.nombre]));
 
-  return NextResponse.json(canciones.map((c: any) => ({
-    id: c.id_cancion,
-    titulo: c.titulo,
-    duracion: c.duracion,
-    num_reproducciones: c.num_reproducciones,
-    artista: artistaMap[albumMap[c.id_album_fk]] ?? '',
-  })));
+  return NextResponse.json(canciones.map((c: any) => {
+    const album = albumMap[c.id_album_fk];
+    const caratulaPath = album?.caratula;
+    const caratula = caratulaPath
+      ? supabase.storage.from('caratulas').getPublicUrl(caratulaPath).data.publicUrl
+      : null;
+    return {
+      id: c.id_cancion,
+      titulo: c.titulo,
+      duracion: c.duracion,
+      num_reproducciones: c.num_reproducciones,
+      artista: artistaMap[album?.id_artista_fk] ?? '',
+      caratula,
+    };
+  }));
 }

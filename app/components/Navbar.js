@@ -394,7 +394,7 @@ function SearchBox() {
                   <div className="search-section-label">Canciones</div>
                   {canciones.slice(0, 4).map((c, i) => (
                     <div key={i} className="search-row">
-                      <Thumb img={null} accent={ACCENTS[i % ACCENTS.length]} />
+                      <Thumb img={c.caratula || null} accent={ACCENTS[i % ACCENTS.length]} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="search-row-title">{c.titulo}</div>
                         <div className="search-row-sub">{c.artista}</div>
