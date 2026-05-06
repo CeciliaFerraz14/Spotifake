@@ -393,7 +393,7 @@ function SearchBox() {
                   {artistas.length > 0 && <div className="search-divider" />}
                   <div className="search-section-label">Canciones</div>
                   {canciones.slice(0, 4).map((c, i) => (
-                    <div key={i} className="search-row">
+                    <div key={i} className="search-row" onClick={() => { if (c.artista) goToArtist(c.artista); }}>
                       <Thumb img={c.caratula || null} accent={ACCENTS[i % ACCENTS.length]} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="search-row-title">{c.titulo}</div>
