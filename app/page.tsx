@@ -1135,7 +1135,7 @@ export default function IntroPage() {
             }}
           >
             <img
-              src="/images/logo.jpeg"
+              src="/images/hojita.png"
               alt="SpotiFake"
               className="center-logo"
               style={{ width: "110px", height: "110px", objectFit: "cover" }}
