@@ -234,29 +234,14 @@ const eqBars = [
   { anim: "nav-eq5", dur: "0.84s", delay: "0.24s" },
 ];
 
-/* ── Datos mock para búsqueda ── */
-const CANCIONES = [
-  { title: "Paranoid Android",  artist: "Radiohead",       duration: "6:23", accent: "#1CF094", img: "/images/caratula1.jpg" },
-  { title: "Last Nite",         artist: "The Strokes",      duration: "3:14", accent: "#ff9a00", img: "/images/caratula4.jpg" },
-  { title: "R U Mine?",         artist: "Arctic Monkeys",   duration: "3:22", accent: "#00d4ff", img: "/images/caratula5.png" },
-  { title: "Come as You Are",   artist: "Nirvana",          duration: "3:38", accent: "#ff3c3c", img: "/images/caratula2.jpg" },
-  { title: "Creep",             artist: "Radiohead",        duration: "3:58", accent: "#6e2fff", img: "/images/caratula1.jpg" },
-  { title: "Blinding Lights",   artist: "The Weeknd",       duration: "3:20", accent: "#ff6ef7", img: "/images/Portada4.jpg" },
-  { title: "Flowers",           artist: "Miley Cyrus",      duration: "3:21", accent: "#ff9a00", img: null },
-  { title: "Anti-Hero",         artist: "Taylor Swift",     duration: "3:21", accent: "#1CF094", img: null },
-  { title: "In Rainbows",       artist: "Radiohead",        duration: "3:42", accent: "#1CF094", img: "/images/caratula3.jpg" },
-  { title: "AM",                artist: "Arctic Monkeys",   duration: "3:32", accent: "#00d4ff", img: "/images/caratula5.png" },
-];
+const ACCENTS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c"];
 
-const ARTISTAS = [
-  { name: "Radiohead",       genre: "Rock alternativo",  songs: 48, accent: "#1CF094", img: "/images/caratula1.jpg" },
-  { name: "Arctic Monkeys",  genre: "Indie rock",         songs: 35, accent: "#00d4ff", img: "/images/caratula5.png" },
-  { name: "Nirvana",         genre: "Grunge",             songs: 29, accent: "#ff3c3c", img: "/images/caratula2.jpg" },
-  { name: "The Strokes",     genre: "Indie rock",         songs: 31, accent: "#ff9a00", img: "/images/caratula4.jpg" },
-  { name: "The Weeknd",      genre: "R&B / Pop",          songs: 52, accent: "#ff6ef7", img: "/images/Portada4.jpg" },
-  { name: "Taylor Swift",    genre: "Pop",                songs: 67, accent: "#a3ff47", img: null },
-  { name: "Miley Cyrus",     genre: "Pop / Rock",         songs: 44, accent: "#ff9a00", img: null },
-];
+function fmtDur(seg) {
+  if (!seg) return "";
+  const m = Math.floor(seg / 60);
+  const s = seg % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function SearchIcon({ size = 15, color = "rgba(255,255,255,0.55)" }) {
   return (
@@ -281,33 +266,45 @@ function Thumb({ img, accent, isArtist = false }) {
   );
 }
 
-const toSlug = (name) => name.toLowerCase().replace(/\s+/g, "-");
+const toSlug = (name) =>
+  name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "-");
 
 function SearchBox() {
-  const [open, setOpen]         = useState(false);
-  const [query, setQuery]       = useState("");
+  const [open, setOpen]           = useState(false);
+  const [query, setQuery]         = useState("");
   const [dbArtistas, setDbArtistas] = useState([]);
-  const wrapRef                 = useRef(null);
-  const inputRef                = useRef(null);
-  const router                  = useRouter();
+  const [dbCanciones, setDbCanciones] = useState([]);
+  const [dbAlbums, setDbAlbums]   = useState([]);
+  const wrapRef                   = useRef(null);
+  const inputRef                  = useRef(null);
+  const router                    = useRouter();
 
   useEffect(() => {
-    fetch("/api/artista")
-      .then(r => r.json())
-      .then(data => Array.isArray(data) ? setDbArtistas(data) : [])
-      .catch(() => {});
+    Promise.all([
+      fetch("/api/artista").then(r => r.json()).catch(() => []),
+      fetch("/api/canciones?limit=200").then(r => r.json()).catch(() => []),
+      fetch("/api/albums").then(r => r.json()).catch(() => []),
+    ]).then(([arts, cans, albs]) => {
+      if (Array.isArray(arts)) setDbArtistas(arts);
+      if (Array.isArray(cans)) setDbCanciones(cans);
+      if (Array.isArray(albs)) setDbAlbums(albs);
+    });
   }, []);
 
   const q = query.trim().toLowerCase();
 
-  const canciones = q
-    ? CANCIONES.filter(c => c.title.toLowerCase().includes(q) || c.artist.toLowerCase().includes(q))
-    : [];
   const artistas = q
     ? dbArtistas.filter(a => a.nombre?.toLowerCase().includes(q) || a.genero?.toLowerCase().includes(q))
     : [];
+  const canciones = q
+    ? dbCanciones.filter(c => c.titulo?.toLowerCase().includes(q) || c.artista?.toLowerCase().includes(q))
+    : [];
+  const albums = q
+    ? dbAlbums.filter(a => a.titulo?.toLowerCase().includes(q) || a.artista?.toLowerCase().includes(q))
+    : [];
 
-  const hasResults = canciones.length > 0 || artistas.length > 0;
+  const total = artistas.length + canciones.length + albums.length;
+  const hasResults = total > 0;
   const showDropdown = open && q.length > 0;
 
   const goToArtist = (nombre) => {
@@ -327,7 +324,6 @@ function SearchBox() {
     inputRef.current?.focus();
   };
 
-  // Cerrar al click fuera
   useEffect(() => {
     const handler = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) {
@@ -339,7 +335,6 @@ function SearchBox() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Cerrar con Escape
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "Escape") { setOpen(false); setQuery(""); }
@@ -358,7 +353,7 @@ function SearchBox() {
         <input
           ref={inputRef}
           className="search-input"
-          placeholder="Artistas, canciones…"
+          placeholder="Artistas, canciones, álbumes…"
           value={query}
           onChange={e => setQuery(e.target.value)}
           tabIndex={open ? 0 : -1}
@@ -376,17 +371,13 @@ function SearchBox() {
             </div>
           ) : (
             <>
+              {/* Artistas */}
               {artistas.length > 0 && (
                 <>
                   <div className="search-section-label">Artistas</div>
                   {artistas.slice(0, 3).map((a, i) => (
-                    <div
-                      key={i}
-                      className="search-row"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => goToArtist(a.nombre)}
-                    >
-                      <Thumb img={null} accent="#1CF094" isArtist />
+                    <div key={i} className="search-row" onClick={() => goToArtist(a.nombre)}>
+                      <Thumb img={a.imagen || null} accent={ACCENTS[i % ACCENTS.length]} isArtist />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="search-row-title">{a.nombre}</div>
                         <div className="search-row-sub">{a.genero}</div>
@@ -396,43 +387,52 @@ function SearchBox() {
                 </>
               )}
 
-              {artistas.length > 0 && canciones.length > 0 && (
-                <div className="search-divider" />
-              )}
-
+              {/* Canciones */}
               {canciones.length > 0 && (
                 <>
+                  {artistas.length > 0 && <div className="search-divider" />}
                   <div className="search-section-label">Canciones</div>
-                  {canciones.slice(0, 5).map((c, i) => (
+                  {canciones.slice(0, 4).map((c, i) => (
                     <div key={i} className="search-row">
-                      <Thumb img={c.img} accent={c.accent} />
+                      <Thumb img={null} accent={ACCENTS[i % ACCENTS.length]} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="search-row-title">{c.title}</div>
-                        <div className="search-row-sub">{c.artist}</div>
+                        <div className="search-row-title">{c.titulo}</div>
+                        <div className="search-row-sub">{c.artista}</div>
                       </div>
-                      <div style={{
-                        color: "rgba(255,255,255,0.25)", fontSize: "0.72rem",
-                        fontFamily: "Arial, sans-serif", flexShrink: 0,
-                      }}>
-                        {c.duration}
+                      <div style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>
+                        {fmtDur(c.duracion)}
                       </div>
                     </div>
                   ))}
                 </>
               )}
 
-              {/* Footer del dropdown */}
+              {/* Álbumes */}
+              {albums.length > 0 && (
+                <>
+                  {(artistas.length > 0 || canciones.length > 0) && <div className="search-divider" />}
+                  <div className="search-section-label">Álbumes</div>
+                  {albums.slice(0, 3).map((a, i) => (
+                    <div key={i} className="search-row" onClick={() => goToArtist(a.artista)}>
+                      <Thumb img={a.caratula || null} accent={ACCENTS[i % ACCENTS.length]} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="search-row-title">{a.titulo}</div>
+                        <div className="search-row-sub">{a.artista} · {a.año ? new Date(a.año).getFullYear() : ""}</div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Footer */}
               <div style={{
                 padding: "10px 16px",
                 borderTop: "1px solid rgba(255,255,255,0.06)",
                 display: "flex", alignItems: "center", gap: "6px",
               }}>
                 <SearchIcon size={12} color="rgba(28,240,148,0.6)" />
-                <span style={{
-                  color: "rgba(255,255,255,0.3)", fontSize: "0.72rem",
-                  fontFamily: "var(--font-nunito), sans-serif",
-                }}>
-                  {canciones.length + artistas.length} resultado{canciones.length + artistas.length !== 1 ? "s" : ""}
+                <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.72rem", fontFamily: "var(--font-nunito), sans-serif" }}>
+                  {total} resultado{total !== 1 ? "s" : ""}
                 </span>
               </div>
             </>
