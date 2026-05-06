@@ -2,7 +2,8 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
+const toSlug = (name: string) =>
+  name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "-");
 
 function fmtDuracion(seg: number) {
   const m = Math.floor(seg / 60);

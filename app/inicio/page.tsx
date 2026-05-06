@@ -6,8 +6,9 @@ import Link from "next/link";
 import { usePlayer } from "@/app/context/PlayerContext";
 import type { Track } from "@/app/context/PlayerContext";
 
-// "Arctic Monkeys" → "arctic-monkeys"
-const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
+// "Arctic Monkeys" → "arctic-monkeys", "Mónica" → "monica"
+const toSlug = (name: string) =>
+  name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "-");
 
 const css = `
   @keyframes shimmer-dash {
@@ -374,6 +375,8 @@ export default function InicioPage() {
   const [albums, setAlbums]             = useState<AlbumDB[]>([]);
   const [addModal, setAddModal]         = useState<Track | null>(null);
   const [addFeedback, setAddFeedback]   = useState<string | null>(null);
+  const [carouselIdx, setCarouselIdx]   = useState(0);
+  const CAROUSEL_VISIBLE = 5;
 
   const enterSection = (which: 'mix' | 'hits') => {
     if (leaveTimer.current) clearTimeout(leaveTimer.current);
@@ -889,41 +892,102 @@ export default function InicioPage() {
         {/* ── Nuevos lanzamientos ── */}
         <section style={{ animation: mounted ? "fade-in-up 0.6s ease 0.34s both" : "none" }}>
           <SectionTitle>Nuevos lanzamientos</SectionTitle>
-          <div className="scroll-row" style={{ marginTop: "16px" }}>
-            {albums.map((album, i) => {
-              const accent = ACCENTS[i % ACCENTS.length];
-              return (
-                <div key={album.id} className="dash-card" style={{ minWidth: "170px", overflow: "hidden", padding: 0 }}
-                  onClick={() => router.push(`/artistas/${toSlug(album.artista)}`)}>
-                  <div style={{ height: "120px", position: "relative", overflow: "hidden" }}>
-                    {album.caratula ? (
-                      <img src={album.caratula} alt={album.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <div style={{
-                        width: "100%", height: "100%",
-                        background: `radial-gradient(circle at 40% 40%, ${accent}55, ${accent}11)`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: "2.5rem", color: accent,
-                      }}>♪</div>
-                    )}
-                    <span className="tag-pill" style={{
-                      position: "absolute", top: "8px", left: "8px",
-                      background: `${accent}22`, border: `1px solid ${accent}55`, color: accent,
-                    }}>
-                      {album.año ? new Date(album.año).getFullYear() : ""}
-                    </span>
-                  </div>
-                  <div style={{ padding: "12px 14px" }}>
-                    <div style={{ color: "white", fontWeight: 700, fontSize: "0.82rem", fontFamily: "var(--font-nunito), sans-serif", marginBottom: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {album.titulo}
+          <div style={{ position: "relative", marginTop: "16px" }}>
+            {/* Flecha izquierda */}
+            <button
+              onClick={() => setCarouselIdx(i => Math.max(0, i - 1))}
+              disabled={carouselIdx === 0}
+              style={{
+                position: "absolute", left: "-28px", top: "50%", transform: "translateY(-50%)",
+                zIndex: 10, width: "36px", height: "36px", borderRadius: "50%",
+                background: carouselIdx === 0 ? "rgba(255,255,255,0.06)" : "rgba(28,240,148,0.18)",
+                border: `1px solid ${carouselIdx === 0 ? "rgba(255,255,255,0.1)" : "rgba(28,240,148,0.4)"}`,
+                color: carouselIdx === 0 ? "rgba(255,255,255,0.2)" : "#1CF094",
+                cursor: carouselIdx === 0 ? "default" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1rem", fontWeight: 700,
+                transition: "background 0.2s, border-color 0.2s, color 0.2s",
+              }}
+            >‹</button>
+
+            {/* Álbumes visibles */}
+            <div style={{ display: "flex", gap: "14px", overflow: "hidden" }}>
+              {albums.slice(carouselIdx, carouselIdx + CAROUSEL_VISIBLE).map((album, i) => {
+                const realIdx = carouselIdx + i;
+                const accent = ACCENTS[realIdx % ACCENTS.length];
+                return (
+                  <div
+                    key={album.id}
+                    className="dash-card"
+                    style={{ flex: `0 0 calc((100% - ${(CAROUSEL_VISIBLE - 1) * 14}px) / ${CAROUSEL_VISIBLE})`, overflow: "hidden", padding: 0, transition: "opacity 0.3s" }}
+                    onClick={() => router.push(`/artistas/${toSlug(album.artista)}`)}
+                  >
+                    <div style={{ height: "120px", position: "relative", overflow: "hidden" }}>
+                      {album.caratula ? (
+                        <img src={album.caratula} alt={album.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{
+                          width: "100%", height: "100%",
+                          background: `radial-gradient(circle at 40% 40%, ${accent}55, ${accent}11)`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "2.5rem", color: accent,
+                        }}>♪</div>
+                      )}
+                      <span className="tag-pill" style={{
+                        position: "absolute", top: "8px", left: "8px",
+                        background: `${accent}22`, border: `1px solid ${accent}55`, color: accent,
+                      }}>
+                        {album.año ? new Date(album.año).getFullYear() : ""}
+                      </span>
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>
-                      <Link href={`/artistas/${toSlug(album.artista)}`} className="artist-link" onClick={e => e.stopPropagation()}>{album.artista}</Link>
+                    <div style={{ padding: "12px 14px" }}>
+                      <div style={{ color: "white", fontWeight: 700, fontSize: "0.82rem", fontFamily: "var(--font-nunito), sans-serif", marginBottom: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {album.titulo}
+                      </div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>
+                        <Link href={`/artistas/${toSlug(album.artista)}`} className="artist-link" onClick={e => e.stopPropagation()}>{album.artista}</Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {/* Flecha derecha */}
+            <button
+              onClick={() => setCarouselIdx(i => Math.min(albums.length - CAROUSEL_VISIBLE, i + 1))}
+              disabled={carouselIdx >= albums.length - CAROUSEL_VISIBLE}
+              style={{
+                position: "absolute", right: "-28px", top: "50%", transform: "translateY(-50%)",
+                zIndex: 10, width: "36px", height: "36px", borderRadius: "50%",
+                background: carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "rgba(255,255,255,0.06)" : "rgba(28,240,148,0.18)",
+                border: `1px solid ${carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "rgba(255,255,255,0.1)" : "rgba(28,240,148,0.4)"}`,
+                color: carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "rgba(255,255,255,0.2)" : "#1CF094",
+                cursor: carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "default" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1rem", fontWeight: 700,
+                transition: "background 0.2s, border-color 0.2s, color 0.2s",
+              }}
+            >›</button>
+
+            {/* Indicadores de puntos */}
+            {albums.length > CAROUSEL_VISIBLE && (
+              <div style={{ display: "flex", justifyContent: "center", gap: "6px", marginTop: "14px" }}>
+                {Array.from({ length: albums.length - CAROUSEL_VISIBLE + 1 }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCarouselIdx(i)}
+                    style={{
+                      width: carouselIdx === i ? "18px" : "6px",
+                      height: "6px", borderRadius: "3px",
+                      background: carouselIdx === i ? "#1CF094" : "rgba(255,255,255,0.2)",
+                      border: "none", cursor: "pointer", padding: 0,
+                      transition: "width 0.25s, background 0.25s",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
