@@ -249,29 +249,6 @@ const css = `
 
 const ACCENTS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c"];
 
-const RELEASES: (Track & { img: string | null; tag: string; tagColor: string })[] = [
-  { title: "REGU",           artist: "The Synthwave Collective", accent: "#1CF094", duration: 218, img: "/images/Portada_1.jpg", tag: "NUEVO",       tagColor: "#1CF094" },
-  { title: "Lluvia de Abril",artist: "Clara Montoya",            accent: "#6e2fff", duration: 195, img: null,                    tag: "HOY",         tagColor: "#a3ff47" },
-  { title: "Midnight Echo",  artist: "Broken Orbit",             accent: "#ff6ef7", duration: 241, img: null,                    tag: "ESTA SEMANA", tagColor: "#5eead4" },
-  { title: "Neon Pulse",     artist: "Synthwave Era",            accent: "#00d4ff", duration: 207, img: null,                    tag: "NUEVO",       tagColor: "#1CF094" },
-];
-
-const MIX: (Track & { durationLabel: string })[] = [
-  { title: "Paranoid Android", artist: "Radiohead",       duration: 383, durationLabel: "6:23", accent: "#1CF094" },
-  { title: "Last Nite",        artist: "The Strokes",      duration: 194, durationLabel: "3:14", accent: "#ff9a00" },
-  { title: "R U Mine?",        artist: "Arctic Monkeys",   duration: 202, durationLabel: "3:22", accent: "#00d4ff" },
-  { title: "Come as You Are",  artist: "Nirvana",          duration: 218, durationLabel: "3:38", accent: "#ff3c3c" },
-  { title: "Creep",            artist: "Radiohead",         duration: 238, durationLabel: "3:58", accent: "#6e2fff" },
-];
-
-const HITS: (Track & { pos: number; durationLabel: string; trend: string })[] = [
-  { pos: 1, title: "Blinding Lights", artist: "The Weeknd",    duration: 200, durationLabel: "3:20", trend: "up",   accent: "#ff6ef7" },
-  { pos: 2, title: "Flowers",         artist: "Miley Cyrus",   duration: 201, durationLabel: "3:21", trend: "flat", accent: "#ff9a00" },
-  { pos: 3, title: "As It Was",       artist: "Harry Styles",  duration: 157, durationLabel: "2:37", trend: "down", accent: "#00d4ff" },
-  { pos: 4, title: "Anti-Hero",       artist: "Taylor Swift",  duration: 201, durationLabel: "3:21", trend: "up",   accent: "#1CF094" },
-  { pos: 5, title: "Unholy",          artist: "Sam Smith",     duration: 156, durationLabel: "2:36", trend: "up",   accent: "#5eead4" },
-];
-
 const EQ = Array.from({ length: 14 }, (_, i) => ({
   dur: `${(0.4 + (i % 5) * 0.1).toFixed(1)}s`,
   del: `${(i * 0.06).toFixed(2)}s`,
@@ -295,6 +272,12 @@ const HITS_NOTES = Array.from({ length: 10 }, (_, i) => ({
   del: `${(i * 0.19).toFixed(2)}s`,
   size: `${0.72 + (i % 3) * 0.13}rem`,
 }));
+
+function fmtDur(seg: number) {
+  const m = Math.floor(seg / 60);
+  const s = seg % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 function TrendIcon({ trend }: { trend: string }) {
   if (trend === "up")   return <span style={{ color: "#1CF094", fontSize: "0.7rem" }}>▲</span>;
@@ -364,7 +347,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number };
 
 type UserPlaylist = { id: string; nombre: string; accent: string; bg: string; canciones?: number };
-type Artista = { nombre: string; genero: string; id_artista?: string; id?: string };
+type Artista = { nombre: string; genero: string; id_artista?: string; id?: string; imagen?: string };
+type CancionDB = { id: string; titulo: string; duracion: number; num_reproducciones: number; artista: string };
+type AlbumDB   = { id: string; titulo: string; año: string; canciones: number; artista: string; artista_id: string };
 
 export default function InicioPage() {
   const { playTrack } = usePlayer();
@@ -384,6 +369,9 @@ export default function InicioPage() {
   const [likedSet, setLikedSet]         = useState<Set<string>>(new Set());
   const [userPlaylists, setUserPlaylists] = useState<UserPlaylist[]>([]);
   const [artistas, setArtistas]         = useState<Artista[]>([]);
+  const [mixCanciones, setMixCanciones] = useState<CancionDB[]>([]);
+  const [topCanciones, setTopCanciones] = useState<CancionDB[]>([]);
+  const [albums, setAlbums]             = useState<AlbumDB[]>([]);
   const [addModal, setAddModal]         = useState<Track | null>(null);
   const [addFeedback, setAddFeedback]   = useState<string | null>(null);
 
@@ -443,10 +431,13 @@ export default function InicioPage() {
       const photo = u.user_metadata?.avatar_url ?? null;
       setUser({ name, email: u.email ?? "", photo });
 
-      const [likesRes, plRes, artistasRes] = await Promise.all([
+      const [likesRes, plRes, artistasRes, topRes, mixRes, albumsRes] = await Promise.all([
         fetch('/api/likes'),
         fetch('/api/playlists'),
         fetch('/api/artista'),
+        fetch('/api/canciones?top=5'),
+        fetch('/api/canciones?limit=5'),
+        fetch('/api/albums'),
       ]);
       if (likesRes.ok) {
         const data = await likesRes.json();
@@ -461,6 +452,18 @@ export default function InicioPage() {
       if (artistasRes.ok) {
         const data = await artistasRes.json();
         if (Array.isArray(data)) setArtistas(data);
+      }
+      if (topRes.ok) {
+        const data = await topRes.json();
+        if (Array.isArray(data)) setTopCanciones(data);
+      }
+      if (mixRes.ok) {
+        const data = await mixRes.json();
+        if (Array.isArray(data)) setMixCanciones(data);
+      }
+      if (albumsRes.ok) {
+        const data = await albumsRes.json();
+        if (Array.isArray(data)) setAlbums(data);
       }
     })();
   }, []);
@@ -504,7 +507,9 @@ export default function InicioPage() {
     setTimeout(() => setAddFeedback(null), 2500);
   };
 
-  const firstName = user?.name?.split(" ")[0] ?? "";
+  const firstName  = user?.name?.split(" ")[0] ?? "";
+  const mixTracks: Track[] = mixCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion }));
+  const topTracks: Track[] = topCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion }));
 
   return (
     <div style={{
@@ -631,15 +636,27 @@ export default function InicioPage() {
                     onClick={() => router.push(`/artistas/${toSlug(a.nombre)}`)}
                     onMouseEnter={(e) => spawnSparks(`art-${i}`, e, accent)}
                   >
-                    <div style={{
-                      width: "64px", height: "64px", borderRadius: "50%", marginBottom: "12px",
-                      background: `radial-gradient(circle at 35% 35%, ${accent}55 0%, ${accent}22 60%, transparent 100%)`,
-                      border: `2px solid ${accent}44`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "1.8rem", color: accent, flexShrink: 0,
-                    }}>
-                      ♫
-                    </div>
+                    {a.imagen ? (
+                      <img
+                        src={a.imagen}
+                        alt={a.nombre}
+                        style={{
+                          width: "64px", height: "64px", borderRadius: "50%", marginBottom: "12px",
+                          objectFit: "cover", flexShrink: 0,
+                          border: `2px solid ${accent}66`,
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: "64px", height: "64px", borderRadius: "50%", marginBottom: "12px",
+                        background: `radial-gradient(circle at 35% 35%, ${accent}55 0%, ${accent}22 60%, transparent 100%)`,
+                        border: `2px solid ${accent}44`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "1.8rem", color: accent, flexShrink: 0,
+                      }}>
+                        ♫
+                      </div>
+                    )}
                     <div style={{ fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.82rem", color: "white", marginBottom: "3px", lineHeight: 1.2 }}>
                       {a.nombre}
                     </div>
@@ -773,8 +790,8 @@ export default function InicioPage() {
               </div>
               {/* Lista de canciones */}
               <div className="panel-scroll">
-                {MIX.map((track, i) => (
-                  <div key={i} className="hit-row" onClick={() => playTrack(track, MIX)}>
+                {mixTracks.map((track, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(track, mixTracks)}>
                     <div style={{
                       width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
                       background: `hsl(${(i * 60 + 140) % 360}, 70%, 25%)`,
@@ -790,7 +807,7 @@ export default function InicioPage() {
                       </div>
                       <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{fmtDur(track.duration ?? 0)}</div>
                     <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
                     <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
@@ -841,26 +858,25 @@ export default function InicioPage() {
                 </div>
               </div>
               <div className="panel-scroll hits-scroll">
-                {HITS.map((h, i) => (
-                  <div key={i} className="hit-row" onClick={() => playTrack(h, HITS)}>
+                {topTracks.map((track, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(track, topTracks)}>
                     <div style={{
                       width: "22px", textAlign: "center", flexShrink: 0,
                       color: i === 0 ? "#1CF094" : "rgba(255,255,255,0.35)",
                       fontWeight: 800, fontSize: "0.82rem",
                       fontFamily: "var(--font-nunito), sans-serif",
                     }}>
-                      {h.pos}
+                      {i + 1}
                     </div>
-                    <TrendIcon trend={h.trend} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {h.title}
+                        {track.title}
                       </div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(h.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{h.artist}</Link></div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
-                    <button onClick={e => toggleLike(h, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${h.title}|${h.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
-                    <button onClick={e => { e.stopPropagation(); setAddModal(h); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{fmtDur(track.duration ?? 0)}</div>
+                    <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
+                    <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))}
@@ -873,37 +889,36 @@ export default function InicioPage() {
         <section style={{ animation: mounted ? "fade-in-up 0.6s ease 0.34s both" : "none" }}>
           <SectionTitle>Nuevos lanzamientos</SectionTitle>
           <div className="scroll-row" style={{ marginTop: "16px" }}>
-            {RELEASES.map((r, i) => (
-              <div key={i} className="dash-card" style={{ minWidth: "170px", overflow: "hidden", padding: 0 }} onClick={() => playTrack(r, RELEASES)}>
-                {/* Portada */}
-                <div style={{
-                  height: "120px", position: "relative", overflow: "hidden",
-                  background: r.img ? undefined : `radial-gradient(circle at 40% 40%, ${r.accent}55, ${r.accent}11)`,
-                }}>
-                  {r.img
-                    ? <img src={r.img} alt={r.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem", color: `${r.accent}` }}>♪</div>
-                  }
-                  <span className="tag-pill" style={{
-                    position: "absolute", top: "8px", left: "8px",
-                    background: `${r.tagColor}22`,
-                    border: `1px solid ${r.tagColor}55`,
-                    color: r.tagColor,
+            {albums.map((album, i) => {
+              const accent = ACCENTS[i % ACCENTS.length];
+              return (
+                <div key={album.id} className="dash-card" style={{ minWidth: "170px", overflow: "hidden", padding: 0 }}
+                  onClick={() => router.push(`/artistas/${toSlug(album.artista)}`)}>
+                  <div style={{
+                    height: "120px", position: "relative", overflow: "hidden",
+                    background: `radial-gradient(circle at 40% 40%, ${accent}55, ${accent}11)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "2.5rem", color: accent,
                   }}>
-                    {r.tag}
-                  </span>
-                  <button className="play-btn" style={{ position: "absolute", bottom: "8px", right: "8px" }} onClick={e => { e.stopPropagation(); playTrack(r, RELEASES); }}>
-                    <PlayIcon />
-                  </button>
-                </div>
-                <div style={{ padding: "12px 14px" }}>
-                  <div style={{ color: "white", fontWeight: 700, fontSize: "0.82rem", fontFamily: "var(--font-nunito), sans-serif", marginBottom: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {r.title}
+                    ♪
+                    <span className="tag-pill" style={{
+                      position: "absolute", top: "8px", left: "8px",
+                      background: `${accent}22`, border: `1px solid ${accent}55`, color: accent,
+                    }}>
+                      {album.año ? new Date(album.año).getFullYear() : ""}
+                    </span>
                   </div>
-                  <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(r.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{r.artist}</Link></div>
+                  <div style={{ padding: "12px 14px" }}>
+                    <div style={{ color: "white", fontWeight: 700, fontSize: "0.82rem", fontFamily: "var(--font-nunito), sans-serif", marginBottom: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {album.titulo}
+                    </div>
+                    <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}>
+                      <Link href={`/artistas/${toSlug(album.artista)}`} className="artist-link" onClick={e => e.stopPropagation()}>{album.artista}</Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -968,8 +983,8 @@ export default function InicioPage() {
           {/* Lista */}
           <div className={`panel-scroll${expandedSection === 'hits' ? ' hits-scroll' : ''}`} style={{ flex: 1, maxHeight: "none" }}>
             {expandedSection === 'mix'
-              ? MIX.map((track, i) => (
-                  <div key={i} className="hit-row" onClick={() => playTrack(track, MIX)}>
+              ? mixTracks.map((track, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(track, mixTracks)}>
                     <div style={{
                       width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
                       background: `hsl(${(i * 60 + 140) % 360}, 70%, 25%)`,
@@ -981,28 +996,27 @@ export default function InicioPage() {
                       <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</div>
                       <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{track.durationLabel}</div>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{fmtDur(track.duration ?? 0)}</div>
                     <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
                     <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))
-              : HITS.map((h, i) => (
-                  <div key={i} className="hit-row" onClick={() => playTrack(h, HITS)}>
+              : topTracks.map((track, i) => (
+                  <div key={i} className="hit-row" onClick={() => playTrack(track, topTracks)}>
                     <div style={{
                       width: "22px", textAlign: "center", flexShrink: 0,
                       color: i === 0 ? "#1CF094" : "rgba(255,255,255,0.35)",
                       fontWeight: 800, fontSize: "0.82rem",
                       fontFamily: "var(--font-nunito), sans-serif",
-                    }}>{h.pos}</div>
-                    <TrendIcon trend={h.trend} />
+                    }}>{i + 1}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.title}</div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(h.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{h.artist}</Link></div>
+                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</div>
+                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
                     </div>
-                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{h.durationLabel}</div>
-                    <button onClick={e => toggleLike(h, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${h.title}|${h.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
-                    <button onClick={e => { e.stopPropagation(); setAddModal(h); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
+                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{fmtDur(track.duration ?? 0)}</div>
+                    <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
+                    <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
                     <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
                   </div>
                 ))

@@ -10,15 +10,17 @@ function fmtDuracion(seg: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-type Artista = { nombre: string; genero: string; id_artista?: string; id?: string; imagen?: string };
-type Cancion = { id: string; titulo: string; duracion: number; num_reproducciones: number };
+type Artista = { nombre: string; genero: string; descripcion?: string; id?: string; imagen?: string };
+type Cancion  = { id: string; titulo: string; duracion: number; num_reproducciones: number };
+type Album    = { id: string; titulo: string; año: string; canciones: number };
 
 export default function ArtistaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }  = use(params);
   const router  = useRouter();
-  const [artista, setArtista] = useState<Artista | null>(null);
+  const [artista,   setArtista]   = useState<Artista | null>(null);
   const [canciones, setCanciones] = useState<Cancion[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [albums,    setAlbums]    = useState<Album[]>([]);
+  const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
     fetch("/api/artista")
@@ -29,12 +31,16 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
         if (!found) { router.replace("/inicio"); return; }
         setArtista(found);
 
-        const artistaId = found.id_artista ?? found.id;
-        if (artistaId) {
-          fetch(`/api/canciones?artista_id=${artistaId}`)
-            .then(r => r.json())
-            .then(c => { if (Array.isArray(c)) setCanciones(c); });
-        }
+        const artistaId = found.id;
+        if (!artistaId) return;
+
+        Promise.all([
+          fetch(`/api/canciones?artista_id=${artistaId}`).then(r => r.json()),
+          fetch(`/api/albums?artista_id=${artistaId}`).then(r => r.json()),
+        ]).then(([c, a]) => {
+          if (Array.isArray(c)) setCanciones(c);
+          if (Array.isArray(a)) setAlbums(a);
+        });
       })
       .catch(() => router.replace("/inicio"))
       .finally(() => setLoading(false));
@@ -49,9 +55,9 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
   if (!artista) return null;
 
   return (
-    <div style={{ maxWidth: "640px", margin: "60px auto", padding: "0 20px" }}>
+    <div style={{ maxWidth: "700px", margin: "60px auto", padding: "0 20px" }}>
 
-      {/* Cabecera del artista */}
+      {/* Cabecera */}
       <div style={{
         background: "rgba(255,255,255,0.04)",
         border: "1px solid rgba(255,255,255,0.08)",
@@ -59,34 +65,74 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
         padding: "32px",
         marginBottom: "20px",
         display: "flex",
-        alignItems: "center",
-        gap: "24px",
+        alignItems: "flex-start",
+        gap: "28px",
       }}>
         {artista.imagen && (
           <img
-            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/artistas/${artista.imagen}`}
+            src={artista.imagen}
             alt={artista.nombre}
             style={{
-              width: "100px",
-              height: "100px",
-              borderRadius: "50%",
-              objectFit: "cover",
+              width: "110px", height: "110px",
+              borderRadius: "50%", objectFit: "cover",
               flexShrink: 0,
               border: "2px solid rgba(255,255,255,0.12)",
             }}
           />
         )}
-        <div>
-          <h1 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "2rem", margin: "0 0 8px" }}>
-            {artista.nombre}
-          </h1>
-          <p style={{ color: "rgba(255,255,255,0.45)", margin: 0 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.75rem", fontFamily: "var(--font-nunito)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "1px" }}>
             {artista.genero}
           </p>
+          <h1 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "2rem", margin: "0 0 12px" }}>
+            {artista.nombre}
+          </h1>
+          {artista.descripcion && (
+            <p style={{ color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-nunito)", fontSize: "0.85rem", lineHeight: 1.6, margin: 0 }}>
+              {artista.descripcion}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Lista de canciones */}
+      {/* Álbumes */}
+      {albums.length > 0 && (
+        <div style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "20px",
+          padding: "24px 28px",
+          marginBottom: "20px",
+        }}>
+          <h2 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "1.1rem", margin: "0 0 16px", opacity: 0.7 }}>
+            Álbumes
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {albums.map(a => (
+              <div key={a.id} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "10px 12px", borderRadius: "10px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.06)",
+              }}>
+                <div>
+                  <div style={{ color: "white", fontFamily: "var(--font-nunito)", fontWeight: 700, fontSize: "0.9rem" }}>
+                    {a.titulo}
+                  </div>
+                  <div style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-nunito)", fontSize: "0.75rem", marginTop: "2px" }}>
+                    {a.año ? new Date(a.año).getFullYear() : ""}
+                  </div>
+                </div>
+                <span style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-nunito)", fontSize: "0.78rem" }}>
+                  {a.canciones} {a.canciones === 1 ? "canción" : "canciones"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Canciones */}
       <div style={{
         background: "rgba(255,255,255,0.04)",
         border: "1px solid rgba(255,255,255,0.08)",
@@ -97,7 +143,6 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
         <h2 style={{ color: "white", fontFamily: "var(--font-nunito)", fontSize: "1.1rem", margin: "0 0 16px", opacity: 0.7 }}>
           Canciones
         </h2>
-
         {canciones.length === 0 ? (
           <p style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-nunito)", margin: 0 }}>
             Sin canciones disponibles
@@ -106,12 +151,8 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {canciones.map((c, i) => (
               <div key={c.id} style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "10px 8px",
-                borderRadius: "10px",
-                transition: "background 0.15s",
+                display: "flex", alignItems: "center", gap: "12px",
+                padding: "10px 8px", borderRadius: "10px", transition: "background 0.15s",
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}

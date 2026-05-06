@@ -31,6 +31,13 @@ fetch("http://localhost:3000/api/artista", {
 */
 
 
+function resolverImagen(supabase, artista) {
+  if (!artista?.imagen) return artista;
+  const { data } = supabase.storage.from('artistas').getPublicUrl(artista.imagen);
+  console.log("imagen original:", artista.imagen, "→ URL pública:", data.publicUrl);
+  return { ...artista, imagen: data.publicUrl };
+}
+
 // GET /api/artista          — devuelve todos los artistas
 // GET /api/artista?nombre=X — devuelve el artista con ese nombre
 export async function GET(request) {
@@ -48,7 +55,7 @@ export async function GET(request) {
     if (error) {
       return NextResponse.json({ error: "Artista no encontrado" }, { status: 404 });
     }
-    return NextResponse.json(data);
+    return NextResponse.json(resolverImagen(supabase, data));
   }
 
   const { data, error } = await supabase
@@ -59,7 +66,7 @@ export async function GET(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(data.map(a => resolverImagen(supabase, a)));
 }
 
 // ENTRAR EN LA URL:
