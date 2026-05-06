@@ -406,19 +406,7 @@ function VinylSection() {
 }
 
 const NEON = "#a3ff47";
-
-const playlists = [
-  { name: "NIGHT DRIVE",  genre: "Synthwave · Lo-fi",   songs: 32, accent: "#6e2fff", bg: "linear-gradient(135deg,#0d0020 0%,#1a0040 100%)" },
-  { name: "RAGE MODE",    genre: "Hip-hop · Trap",       songs: 47, accent: "#ff3c3c", bg: "linear-gradient(135deg,#200000 0%,#3a0505 100%)" },
-  { name: "CHILL WAVE",   genre: "Indie · Ambient",      songs: 28, accent: "#00d4ff", bg: "linear-gradient(135deg,#001520 0%,#002a3a 100%)" },
-  { name: "EUPHORIA",     genre: "Pop · Dance",          songs: 55, accent: "#ff6ef7", bg: "linear-gradient(135deg,#1a0020 0%,#35003a 100%)" },
-  { name: "DARK MATTER",  genre: "Electronic · DnB",     songs: 41, accent: NEON,      bg: "linear-gradient(135deg,#001a00 0%,#003a0a 100%)" },
-  { name: "SOLAR FLARE",  genre: "Rock · Psych",         songs: 36, accent: "#ff9a00", bg: "linear-gradient(135deg,#1a0800 0%,#3a1800 100%)" },
-  { name: "VOID WALKER",  genre: "Industrial · Metal",   songs: 23, accent: "#c060ff", bg: "linear-gradient(135deg,#100015 0%,#220030 100%)" },
-  { name: "NEON TOKYO",   genre: "J-Pop · Future Bass",  songs: 38, accent: "#ff0080", bg: "linear-gradient(135deg,#1a0010 0%,#35002a 100%)" },
-  { name: "DEEP SEA",     genre: "Ambient · Drone",      songs: 19, accent: "#00ffcc", bg: "linear-gradient(135deg,#001510 0%,#002820 100%)" },
-  { name: "BROKEN BEAT",  genre: "Jazz · Neo-Soul",      songs: 44, accent: "#ffcc00", bg: "linear-gradient(135deg,#1a1400 0%,#2e2200 100%)" },
-];
+const ACCENTS = ["#6e2fff","#ff3c3c","#00d4ff","#ff6ef7","#a3ff47","#ff9a00","#c060ff","#ff0080","#00ffcc","#ffcc00"];
 
 const carouselCss = `
 @keyframes card-enter {
@@ -496,13 +484,28 @@ const carouselCss = `
 
 `;
 
+type AlbumCard = { id: string; titulo: string; año: string; canciones: number; caratula?: string; artista: string; genero: string };
+
 function PlaylistCarouselSection() {
-  const [active, setActive] = useState(4);
+  const [active, setActive] = useState(0);
   const [entered, setEntered] = useState(false);
   const [slideAnim, setSlideAnim] = useState<{ key: number; dir: "left" | "right" }>({ key: 0, dir: "left" });
+  const [albums, setAlbums] = useState<AlbumCard[]>([]);
   const sectionRef = useRef<HTMLDivElement>(null);
   const dragStartX = useRef<number | null>(null);
   const dragMoved  = useRef(false);
+
+  useEffect(() => {
+    fetch("/api/albums")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAlbums(data);
+          setActive(Math.min(4, Math.floor(data.length / 2)));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -514,7 +517,7 @@ function PlaylistCarouselSection() {
     return () => io.disconnect();
   }, []);
 
-  const n = playlists.length;
+  const n = albums.length;
   const prev = () => {
     setActive(a => (a - 1 + n) % n);
     setSlideAnim(s => ({ key: s.key + 1, dir: "right" }));
@@ -594,7 +597,8 @@ function PlaylistCarouselSection() {
               : "none",
           }}
         >
-        {playlists.map((pl, idx) => {
+        {albums.map((album, idx) => {
+          const accent = ACCENTS[idx % ACCENTS.length];
           let offset = idx - active;
           if (offset > n / 2)  offset -= n;
           if (offset < -n / 2) offset += n;
@@ -611,7 +615,7 @@ function PlaylistCarouselSection() {
 
           return (
             <div
-              key={pl.name}
+              key={album.id}
               className={`pl-card${isActive ? " active" : ""}`}
               onClick={() => { if (!dragMoved.current) setActive(idx); }}
               style={{
@@ -629,12 +633,19 @@ function PlaylistCarouselSection() {
               }}
             >
               {/* Portada */}
-              <img
-                src={innerImages[idx % innerImages.length]}
-                alt={pl.name}
-                style={{ position:"absolute", inset:0, width:"100%", height:"100%",
-                  objectFit:"cover", display:"block", pointerEvents:"none" }}
-              />
+              {album.caratula ? (
+                <img
+                  src={album.caratula}
+                  alt={album.titulo}
+                  style={{ position:"absolute", inset:0, width:"100%", height:"100%",
+                    objectFit:"cover", display:"block", pointerEvents:"none" }}
+                />
+              ) : (
+                <div style={{ position:"absolute", inset:0,
+                  background:`radial-gradient(circle at 40% 40%, ${accent}33, #0a0a0a)`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontSize:"4rem", color:`${accent}88` }}>♪</div>
+              )}
 
               {/* Scrim oscuro sobre la imagen */}
               <div style={{ position:"absolute", inset:0,
@@ -643,23 +654,23 @@ function PlaylistCarouselSection() {
 
               {/* Accent bar */}
               <div style={{ position:"absolute", top:0, left:0, right:0, height:"4px",
-                background:pl.accent, boxShadow:`0 0 16px ${pl.accent}`, zIndex:2 }} />
+                background:accent, boxShadow:`0 0 16px ${accent}`, zIndex:2 }} />
 
-              {/* Song count badge */}
+              {/* Año badge */}
               <div style={{ position:"absolute", top:"18px", right:"16px",
-                background:"rgba(0,0,0,.65)", border:`1px solid ${pl.accent}55`,
+                background:"rgba(0,0,0,.65)", border:`1px solid ${accent}55`,
                 borderRadius:"20px", padding:"3px 10px",
-                color:pl.accent, fontSize:".7rem", fontFamily:"Arial, sans-serif",
+                color:accent, fontSize:".7rem", fontFamily:"Arial, sans-serif",
                 letterSpacing:"1px", zIndex:2 }}>
-                {pl.songs} tracks
+                {album.año ? new Date(album.año).getFullYear() : ""}
               </div>
 
               {/* Label */}
               <div className="pl-label" style={{ zIndex:2 }}>
                 <p style={{ margin:"0 0 4px", fontFamily:"var(--font-anton),'Anton',sans-serif",
-                  fontSize:"1.1rem", color:"#fff", letterSpacing:"2px" }}>{pl.name}</p>
+                  fontSize:"1.1rem", color:"#fff", letterSpacing:"2px" }}>{album.titulo.toUpperCase()}</p>
                 <p style={{ margin:0, fontSize:".75rem", color:"rgba(255,255,255,.65)",
-                  fontFamily:"Arial,sans-serif" }}>{pl.genre}</p>
+                  fontFamily:"Arial,sans-serif" }}>{album.artista} · {album.genero}</p>
               </div>
             </div>
           );
@@ -715,7 +726,7 @@ function PlaylistCarouselSection() {
 
       {/* Dots */}
       <div style={{ display:"flex", gap:"8px", zIndex:5, position:"relative", marginBottom:"60px" }}>
-        {playlists.map((_, i) => (
+        {albums.map((_, i) => (
           <button key={i} onClick={() => setActive(i)} style={{
             width: i === active ? "24px" : "8px", height:"8px",
             borderRadius:"4px", border:"none", cursor:"pointer",
