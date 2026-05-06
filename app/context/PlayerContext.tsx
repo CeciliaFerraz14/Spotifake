@@ -16,12 +16,14 @@ type PlayerCtx = {
   progress: number;  // 0–100
   elapsed: number;   // segundos
   volume: number;    // 0–100
+  shuffle: boolean;
   playTrack: (t: Track, q?: Track[]) => void;
   toggle: () => void;
   next: () => void;
   prev: () => void;
   seek: (pct: number) => void;
   setVolume: (v: number) => void;
+  toggleShuffle: () => void;
 };
 
 const Ctx = createContext<PlayerCtx | null>(null);
@@ -37,6 +39,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [playing,  setPlaying] = useState(false);
   const [elapsed,  setElapsed] = useState(0);
   const [volume,   setVol]     = useState(70);
+  const [shuffle,  setShuffle] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const track = queue[idx] ?? null;
@@ -53,14 +56,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setElapsed(e => {
         if (e >= duration - 1) {
           clearTick();
-          // auto-siguiente
-          setIdx(i => i + 1 < queue.length ? i + 1 : 0);
+          if (shuffle && queue.length > 1) {
+            setIdx(i => {
+              let r = i;
+              while (r === i) r = Math.floor(Math.random() * queue.length);
+              return r;
+            });
+          } else {
+            setIdx(i => i + 1 < queue.length ? i + 1 : 0);
+          }
           return 0;
         }
         return e + 1;
       });
     }, 1000);
-  }, [duration, queue.length]);
+  }, [duration, queue.length, shuffle]);
 
   useEffect(() => {
     if (playing) startTick();
@@ -83,9 +93,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const toggle = () => setPlaying(p => !p);
 
   const next = () => {
-    setIdx(i => (i + 1) % Math.max(queue.length, 1));
+    if (shuffle && queue.length > 1) {
+      setIdx(i => {
+        let r = i;
+        while (r === i) r = Math.floor(Math.random() * queue.length);
+        return r;
+      });
+    } else {
+      setIdx(i => (i + 1) % Math.max(queue.length, 1));
+    }
     setElapsed(0);
   };
+
+  const toggleShuffle = () => setShuffle(s => !s);
 
   const prev = () => {
     if (elapsed > 3) { setElapsed(0); return; }
@@ -97,7 +117,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const setVolume = (v: number) => setVol(Math.max(0, Math.min(100, v)));
 
   return (
-    <Ctx.Provider value={{ track, queue, playing, progress, elapsed, volume, playTrack, toggle, next, prev, seek, setVolume }}>
+    <Ctx.Provider value={{ track, queue, playing, progress, elapsed, volume, shuffle, playTrack, toggle, next, prev, seek, setVolume, toggleShuffle }}>
       {children}
     </Ctx.Provider>
   );

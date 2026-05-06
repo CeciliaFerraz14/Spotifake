@@ -90,12 +90,12 @@ const css = `
   .shuffle-btn:hover { background: rgba(255,255,255,0.13); color: white; }
 
   .glass-panel {
-    background: rgba(28, 240, 148, 0.06);
-    border: 1px solid rgba(28, 240, 148, 0.18);
+    background: rgba(28, 240, 148, 0.07);
+    border: 1px solid rgba(94, 234, 212, 0.28);
     border-radius: 22px;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 8px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(28,240,148,0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 48px rgba(0,0,0,0.2), inset 0 1px 0 rgba(94,234,212,0.15);
   }
 
   .eq-bars { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
@@ -112,15 +112,22 @@ const css = `
   .tracks-scroll::-webkit-scrollbar-thumb { background: rgba(28,240,148,0.3); border-radius: 2px; }
 `;
 
-const STAR_COLORS = ["#ffffff","#1CF094","#5eead4","#a3ff47","#00d4ff","#6e2fff","#ff6ef7","#ff9a00","#ffeeaa","#aaddff"];
-const STARS = Array.from({ length: 140 }, (_, i) => ({
-  top:    `${(i * 37 + 13) % 100}%`,
-  left:   `${(i * 53 +  7) % 100}%`,
-  size:   i % 10 === 0 ? 3.5 : i % 5 === 0 ? 2.2 : i % 3 === 0 ? 1.6 : 1.0,
-  color:  STAR_COLORS[i % STAR_COLORS.length],
-  opacity: 0.35 + ((i * 41) % 55) / 100,
-  dur:    `${1.5 + (i % 5) * 0.6}s`,
-  del:    `${(i * 0.19) % 5}s`,
+const STAR_COLORS = [
+  "#ffffff", "#ffffff", "#ffffff",
+  "#1CF094", "#5eead4", "#a3ff47",
+  "#00d4ff", "#6e2fff", "#ff6ef7",
+  "#ff9a00", "#ffeeaa", "#aaddff",
+  "#cc88ff", "#88ffcc",
+];
+
+const STARS = Array.from({ length: 220 }, (_, i) => ({
+  top:     `${(i * 31 + 11) % 100}%`,
+  left:    `${(i * 47 +  3) % 100}%`,
+  size:    i % 15 === 0 ? 4.5 : i % 7 === 0 ? 3.0 : i % 4 === 0 ? 2.0 : i % 2 === 0 ? 1.4 : 0.9,
+  color:   STAR_COLORS[i % STAR_COLORS.length],
+  opacity: 0.55 + ((i * 41) % 45) / 100,
+  dur:     `${1.2 + (i % 6) * 0.5}s`,
+  del:     `${(i * 0.13) % 5}s`,
 }));
 
 function fmt(s: number) {
@@ -166,7 +173,7 @@ export default function PlaylistDetailPage() {
   const router   = useRouter();
   const params   = useParams();
   const supabase = createClient();
-  const { playTrack, track: currentTrack, playing } = usePlayer();
+  const { playTrack, track: currentTrack, playing, shuffle, toggleShuffle } = usePlayer();
 
   const [cargando, setCargando]   = useState(true);
   const [mounted,  setMounted]    = useState(false);
@@ -279,7 +286,28 @@ export default function PlaylistDetailPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="#061210"><polygon points="5,3 19,12 5,21" /></svg>
                   Reproducir todo
                 </button>
-                <button className="shuffle-btn">
+                <button
+                  className="shuffle-btn"
+                  onClick={() => {
+                    toggleShuffle();
+                    if (tracks.length > 0) {
+                      const r = Math.floor(Math.random() * tracks.length);
+                      playTrack(tracks[r], tracks);
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: "8px",
+                    background: shuffle ? "rgba(28,240,148,0.18)" : "rgba(255,255,255,0.07)",
+                    border: shuffle ? "1px solid rgba(28,240,148,0.5)" : "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "50px", padding: "12px 26px", cursor: "pointer",
+                    color: shuffle ? "#1CF094" : "rgba(255,255,255,0.85)",
+                    fontWeight: 700, fontSize: "0.9rem",
+                    fontFamily: "var(--font-nunito), sans-serif",
+                    backdropFilter: "blur(8px)",
+                    transition: "all 0.2s",
+                    boxShadow: shuffle ? "0 0 16px rgba(28,240,148,0.3)" : "none",
+                  }}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
                     <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>

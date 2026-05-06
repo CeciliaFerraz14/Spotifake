@@ -180,6 +180,51 @@ const css = `
     text-align: center;
     gap: 16px;
   }
+
+  @keyframes ctx-in {
+    from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .ctx-menu {
+    position: fixed; z-index: 1000;
+    background: rgba(10, 18, 30, 0.92);
+    border: 1px solid rgba(28,240,148,0.25);
+    border-radius: 14px;
+    padding: 6px;
+    min-width: 180px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
+    animation: ctx-in 0.18s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .ctx-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 9px;
+    cursor: pointer; font-family: var(--font-nunito), sans-serif;
+    font-size: 0.84rem; font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    transition: background 0.15s, color 0.15s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .ctx-item:hover { background: rgba(255,255,255,0.08); color: white; }
+  .ctx-item.danger:hover { background: rgba(255,60,60,0.12); color: #ff4d4d; }
+  .ctx-divider {
+    height: 1px; background: rgba(255,255,255,0.07); margin: 4px 8px;
+  }
+
+  .rename-backdrop {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,4,12,0.75);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rename-box {
+    background: linear-gradient(145deg, #0d1a12, #0a0f1a);
+    border: 1px solid rgba(28,240,148,0.2);
+    border-radius: 20px; padding: 28px 24px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    animation: ctx-in 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
 `;
 
 const COLOR_OPTIONS = [
@@ -257,10 +302,19 @@ export default function PlaylistsPage() {
   const [likedCount, setLikedCount] = useState(0);
   const [sparkMap, setSparkMap]   = useState<Record<string, SparkItem[]>>({});
 
-  // Modal estado
+  // Modal crear
   const [modalOpen, setModalOpen]       = useState(false);
   const [nuevoNombre, setNuevoNombre]   = useState("");
   const [colorIdx, setColorIdx]         = useState(0);
+
+  // Menú contextual
+  type CtxMenu = { x: number; y: number; playlist: Playlist } | null;
+  const [ctxMenu, setCtxMenu] = useState<CtxMenu>(null);
+
+  // Modal renombrar
+  const [renameOpen, setRenameOpen]   = useState(false);
+  const [renameTarget, setRenameTarget] = useState<Playlist | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -300,7 +354,7 @@ export default function PlaylistsPage() {
 
   const crearPlaylist = async () => {
     const nombre = nuevoNombre.trim();
-    if (!nombre) return;
+    if (!nombre || !user) return;
     const color = COLOR_OPTIONS[colorIdx];
     const res = await fetch('/api/playlists', {
       method: 'POST',
@@ -320,6 +374,33 @@ export default function PlaylistsPage() {
     setModalOpen(false);
     setNuevoNombre("");
     setColorIdx(0);
+  };
+
+  const eliminarPlaylist = async (pl: Playlist) => {
+    setCtxMenu(null);
+    if (typeof pl.id === "string") {
+      await supabase.from("playlists").delete().eq("id", pl.id);
+    }
+    setPlaylists(prev => prev.filter(p => p.id !== pl.id));
+  };
+
+  const abrirRenombrar = (pl: Playlist) => {
+    setCtxMenu(null);
+    setRenameTarget(pl);
+    setRenameValue(pl.nombre);
+    setRenameOpen(true);
+  };
+
+  const confirmarRenombre = async () => {
+    if (!renameTarget || !renameValue.trim()) return;
+    const nombre = renameValue.trim();
+    if (typeof renameTarget.id === "string") {
+      await supabase.from("playlists").update({ nombre }).eq("id", renameTarget.id);
+    }
+    setPlaylists(prev => prev.map(p => p.id === renameTarget.id ? { ...p, nombre } : p));
+    setRenameOpen(false);
+    setRenameTarget(null);
+    setRenameValue("");
   };
 
   if (cargando) {
@@ -355,7 +436,7 @@ export default function PlaylistsPage() {
 
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "36px 24px 120px", position: "relative", zIndex: 1 }}>
 
-        {/* ── Cabecera de usuario ── */}
+        {/* Cabecera de usuario */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           marginBottom: "40px", flexWrap: "wrap", gap: "16px",
@@ -399,7 +480,7 @@ export default function PlaylistsPage() {
           </button>
         </div>
 
-        {/* ── Sección título ── */}
+        {/* Sección título */}
         <section style={{ animation: mounted ? "fade-in-up 0.6s ease 0.1s both" : "none" }}>
           <h2 className="section-title">
             Colección
@@ -504,6 +585,7 @@ export default function PlaylistsPage() {
                     } as React.CSSProperties}
                     onMouseEnter={e => spawnSparks(`pl-${i}`, e, pl.accent)}
                     onClick={() => router.push(`/playlists/${pl.id}`)}
+                    onContextMenu={e => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, playlist: pl }); }}
                   >
                     {/* Portada */}
                     <div style={{
@@ -513,7 +595,6 @@ export default function PlaylistsPage() {
                       position: "relative", overflow: "hidden",
                     }}>
                       <Vinyl accent={pl.accent} size={64} />
-                      {/* Overlay de gradiente */}
                       <div style={{
                         position: "absolute", inset: 0,
                         background: `radial-gradient(circle at 30% 30%, ${pl.accent}22, transparent 70%)`,
@@ -544,7 +625,6 @@ export default function PlaylistsPage() {
                       <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", marginTop: "3px" }}>
                         {pl.canciones === 0 ? "Sin canciones" : `${pl.canciones} canciones`}
                       </div>
-                      {/* Barra de acento */}
                       <div style={{
                         marginTop: "10px", height: "2px", borderRadius: "2px",
                         background: `linear-gradient(90deg, ${pl.accent}, transparent)`,
@@ -558,12 +638,79 @@ export default function PlaylistsPage() {
         </section>
       </div>
 
-      {/* ── Modal: Crear playlist ── */}
+      {/* Menú contextual */}
+      {ctxMenu && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 999 }} onClick={() => setCtxMenu(null)} />
+          <div className="ctx-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }}>
+            <button className="ctx-item" onClick={() => abrirRenombrar(ctxMenu.playlist)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Cambiar nombre
+            </button>
+            <div className="ctx-divider" />
+            <button className="ctx-item danger" onClick={() => eliminarPlaylist(ctxMenu.playlist)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+              Eliminar playlist
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Modal: Renombrar playlist */}
+      {renameOpen && renameTarget && (
+        <div className="rename-backdrop" onClick={() => setRenameOpen(false)}>
+          <div className="rename-box" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <h2 style={{ margin: 0, fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1.1rem", color: "white" }}>
+                Cambiar nombre
+              </h2>
+              <button onClick={() => setRenameOpen(false)} style={{
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "50%", width: "30px", height: "30px", color: "rgba(255,255,255,0.5)",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
+              }}>×</button>
+            </div>
+            <input
+              className="modal-input"
+              type="text"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") confirmarRenombre(); }}
+              autoFocus
+              maxLength={40}
+            />
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <button onClick={() => setRenameOpen(false)} style={{
+                flex: 1, padding: "10px", borderRadius: "10px",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.6)", cursor: "pointer",
+                fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.88rem",
+              }}>Cancelar</button>
+              <button onClick={confirmarRenombre} disabled={!renameValue.trim()} style={{
+                flex: 1, padding: "10px", borderRadius: "10px",
+                background: renameValue.trim() ? "linear-gradient(135deg, #1CF094, #5eead4)" : "rgba(255,255,255,0.08)",
+                border: "none", cursor: renameValue.trim() ? "pointer" : "not-allowed",
+                color: renameValue.trim() ? "#0a0f1a" : "rgba(255,255,255,0.25)",
+                fontFamily: "var(--font-nunito), sans-serif", fontWeight: 800, fontSize: "0.88rem",
+              }}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Crear playlist */}
       {modalOpen && (
         <div className="modal-backdrop" onClick={cerrarModal}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
 
-            {/* Título del modal */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
               <h2 style={{
                 margin: 0, fontFamily: "var(--font-nunito), sans-serif",
@@ -587,7 +734,6 @@ export default function PlaylistsPage() {
               </button>
             </div>
 
-            {/* Campo nombre */}
             <label style={{
               display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem",
               fontFamily: "var(--font-nunito), sans-serif", letterSpacing: "0.5px",
@@ -606,7 +752,6 @@ export default function PlaylistsPage() {
               maxLength={40}
             />
 
-            {/* Selector de color */}
             <label style={{
               display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem",
               fontFamily: "var(--font-nunito), sans-serif", letterSpacing: "0.5px",
@@ -624,7 +769,6 @@ export default function PlaylistsPage() {
                   aria-label={`Color ${i + 1}`}
                 />
               ))}
-              {/* Preview */}
               <div style={{
                 marginLeft: "auto",
                 width: "48px", height: "48px", borderRadius: "12px",
@@ -637,7 +781,6 @@ export default function PlaylistsPage() {
               </div>
             </div>
 
-            {/* Botones */}
             <div style={{ display: "flex", gap: "10px", marginTop: "28px" }}>
               <button
                 onClick={cerrarModal}
