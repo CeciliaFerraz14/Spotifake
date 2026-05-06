@@ -12,7 +12,7 @@ function fmtDuracion(seg: number) {
 
 type Artista = { nombre: string; genero: string; descripcion?: string; id?: string; imagen?: string };
 type Cancion  = { id: string; titulo: string; duracion: number; num_reproducciones: number };
-type Album    = { id: string; titulo: string; año: string; canciones: number };
+type Album    = { id: string; titulo: string; año: string; canciones: number; caratula?: string };
 
 export default function ArtistaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id }  = use(params);
@@ -39,7 +39,10 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
           fetch(`/api/albums?artista_id=${artistaId}`).then(r => r.json()),
         ]).then(([c, a]) => {
           if (Array.isArray(c)) setCanciones(c);
-          if (Array.isArray(a)) setAlbums(a);
+          if (Array.isArray(a)) {
+            console.log("Albums del artista:", a.map((x: any) => ({ titulo: x.titulo, caratula: x.caratula })));
+            setAlbums(a);
+          }
         });
       })
       .catch(() => router.replace("/inicio"))
@@ -110,12 +113,17 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {albums.map(a => (
               <div key={a.id} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
+                display: "flex", alignItems: "center", gap: "14px",
                 padding: "10px 12px", borderRadius: "10px",
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.06)",
               }}>
-                <div>
+                {a.caratula ? (
+                  <img src={a.caratula} alt={a.titulo} style={{ width: "52px", height: "52px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: "52px", height: "52px", borderRadius: "8px", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>♫</div>
+                )}
+                <div style={{ flex: 1 }}>
                   <div style={{ color: "white", fontFamily: "var(--font-nunito)", fontWeight: 700, fontSize: "0.9rem" }}>
                     {a.titulo}
                   </div>

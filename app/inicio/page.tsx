@@ -349,7 +349,7 @@ type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; col
 type UserPlaylist = { id: string; nombre: string; accent: string; bg: string; canciones?: number };
 type Artista = { nombre: string; genero: string; id_artista?: string; id?: string; imagen?: string };
 type CancionDB = { id: string; titulo: string; duracion: number; num_reproducciones: number; artista: string };
-type AlbumDB   = { id: string; titulo: string; año: string; canciones: number; artista: string; artista_id: string };
+type AlbumDB   = { id: string; titulo: string; año: string; canciones: number; caratula?: string; artista: string; artista_id: string };
 
 export default function InicioPage() {
   const { playTrack } = usePlayer();
@@ -463,6 +463,7 @@ export default function InicioPage() {
       }
       if (albumsRes.ok) {
         const data = await albumsRes.json();
+        console.log("Albums recibidos:", data.map((a: any) => ({ titulo: a.titulo, caratula: a.caratula })));
         if (Array.isArray(data)) setAlbums(data);
       }
     })();
@@ -894,13 +895,17 @@ export default function InicioPage() {
               return (
                 <div key={album.id} className="dash-card" style={{ minWidth: "170px", overflow: "hidden", padding: 0 }}
                   onClick={() => router.push(`/artistas/${toSlug(album.artista)}`)}>
-                  <div style={{
-                    height: "120px", position: "relative", overflow: "hidden",
-                    background: `radial-gradient(circle at 40% 40%, ${accent}55, ${accent}11)`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "2.5rem", color: accent,
-                  }}>
-                    ♪
+                  <div style={{ height: "120px", position: "relative", overflow: "hidden" }}>
+                    {album.caratula ? (
+                      <img src={album.caratula} alt={album.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{
+                        width: "100%", height: "100%",
+                        background: `radial-gradient(circle at 40% 40%, ${accent}55, ${accent}11)`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "2.5rem", color: accent,
+                      }}>♪</div>
+                    )}
                     <span className="tag-pill" style={{
                       position: "absolute", top: "8px", left: "8px",
                       background: `${accent}22`, border: `1px solid ${accent}55`, color: accent,

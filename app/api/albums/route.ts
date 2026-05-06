@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from('albums')
-    .select('id_album, titulo, año, canciones, id_artista_fk')
+    .select('*')
     .order('año', { ascending: false });
 
   if (artista_id) query = query.eq('id_artista_fk', artista_id);
@@ -28,13 +28,19 @@ export async function GET(request: Request) {
 
   const artistaMap = Object.fromEntries((artistas ?? []).map((a: any) => [a.id, a]));
 
-  return NextResponse.json(albums.map((a: any) => ({
-    id: a.id_album,
-    titulo: a.titulo,
-    año: a.año,
-    canciones: a.canciones,
-    artista: artistaMap[a.id_artista_fk]?.nombre ?? '',
-    artista_id: a.id_artista_fk,
-    genero: artistaMap[a.id_artista_fk]?.genero ?? '',
-  })));
+  return NextResponse.json(albums.map((a: any) => {
+    const caratulaUrl = a.caratula
+      ? supabase.storage.from('caratulas').getPublicUrl(a.caratula).data.publicUrl
+      : null;
+    return {
+      id: a.id_album,
+      titulo: a.titulo,
+      año: a.año,
+      canciones: a.canciones,
+      caratula: caratulaUrl,
+      artista: artistaMap[a.id_artista_fk]?.nombre ?? '',
+      artista_id: a.id_artista_fk,
+      genero: artistaMap[a.id_artista_fk]?.genero ?? '',
+    };
+  }));
 }

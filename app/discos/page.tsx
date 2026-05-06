@@ -6,7 +6,7 @@ const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
 const ACCENTS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c"];
 
-type Album = { id: string; titulo: string; año: string; canciones: number; artista: string; artista_id: string };
+type Album = { id: string; titulo: string; año: string; canciones: number; caratula?: string; artista: string; artista_id: string };
 
 export default function DiscosPage() {
   const router = useRouter();
@@ -47,18 +47,23 @@ export default function DiscosPage() {
                 >
                   <div
                     className="album-img-wrap w-full"
-                    style={{
-                      aspectRatio: "1 / 1",
-                      background: `linear-gradient(135deg, ${accent}88 0%, ${accent}33 100%)`,
-                      borderRadius: "12px",
-                      display: "flex", flexDirection: "column",
-                      alignItems: "center", justifyContent: "center", gap: "8px",
-                    }}
+                    style={{ aspectRatio: "1 / 1", borderRadius: "12px", overflow: "hidden", position: "relative" }}
                   >
-                    <span style={{ fontSize: "3.5rem", lineHeight: 1 }}>♫</span>
+                    {album.caratula ? (
+                      <img src={album.caratula} alt={album.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{
+                        width: "100%", height: "100%",
+                        background: `linear-gradient(135deg, ${accent}88 0%, ${accent}33 100%)`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "3.5rem",
+                      }}>♫</div>
+                    )}
                     <span style={{
-                      fontSize: "0.7rem", fontWeight: 700, letterSpacing: "1px",
-                      color: "rgba(255,255,255,0.85)", textTransform: "uppercase",
+                      position: "absolute", bottom: "8px", right: "8px",
+                      fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1px",
+                      color: "white", textTransform: "uppercase",
+                      background: "rgba(0,0,0,0.5)", borderRadius: "4px", padding: "2px 6px",
                       fontFamily: "var(--font-nunito), sans-serif",
                     }}>
                       {año}
