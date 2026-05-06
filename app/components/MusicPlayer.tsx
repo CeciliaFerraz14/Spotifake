@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePlayer } from "../context/PlayerContext";
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
@@ -18,6 +18,14 @@ const playerCss = `
     from { transform: translateY(100%); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
   }
+  @keyframes heartbeat {
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.5); }
+    50%  { transform: scale(1); }
+    75%  { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  .heart-like-btn { animation: heartbeat 0.45s ease; }
 
   .player-root {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -126,8 +134,42 @@ function Vinyl({ accent, playing }: { accent: string; playing: boolean }) {
 export default function MusicPlayer() {
   const { track, playing, progress, elapsed, volume, toggle, next, prev, seek, setVolume } = usePlayer();
   const [muted, setMuted] = useState(false);
+  const [likedSet, setLikedSet] = useState<Set<string>>(new Set());
+  const [heartAnim, setHeartAnim] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const volRef      = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch('/api/likes').then(r => r.ok ? r.json() : []).then((data: any[]) => {
+      if (Array.isArray(data)) {
+        setLikedSet(new Set(data.map(s => `${s.titulo}|${s.artista}`)));
+      }
+    });
+  }, []);
+
+  const toggleLike = async () => {
+    if (!track) return;
+    const key = `${track.title}|${track.artist}`;
+    const liked = likedSet.has(key);
+    setHeartAnim(false);
+    setTimeout(() => setHeartAnim(true), 10);
+    setTimeout(() => setHeartAnim(false), 500);
+    if (liked) {
+      await fetch('/api/likes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: track.title, artista: track.artist }),
+      });
+      setLikedSet(prev => { const n = new Set(prev); n.delete(key); return n; });
+    } else {
+      await fetch('/api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration }),
+      });
+      setLikedSet(prev => new Set(prev).add(key));
+    }
+  };
 
   const accent   = track?.accent   ?? "#1CF094";
   const duration = track?.duration ?? 210;
@@ -180,8 +222,16 @@ export default function MusicPlayer() {
                     <Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link">{track.artist}</Link>
                   </div>
                 </div>
-                <button className="player-ctrl-btn" style={{ marginLeft: "4px" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <button
+                  className={`player-ctrl-btn${heartAnim ? " heart-like-btn" : ""}`}
+                  style={{ marginLeft: "4px", color: track && likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : undefined }}
+                  onClick={toggleLike}
+                  title={track && likedSet.has(`${track.title}|${track.artist}`) ? "Quitar de Me gusta" : "Añadir a Me gusta"}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24"
+                    fill={track && likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "none"}
+                    stroke={track && likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "currentColor"}
+                    strokeWidth="2">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                   </svg>
                 </button>
