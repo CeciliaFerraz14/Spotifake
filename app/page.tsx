@@ -15,11 +15,11 @@ const innerImages = [
 ];
 
 const outerImages = [
-  "/images/dj_keke.jpg",
+  "/images/portada.jpg",
   "/images/totakeke.jpg",
   "/images/chil.jpg",
-  "/images/icon1.jpg",
-  "/images/icon2.jpg",
+  "/images/portada.1.jpg",
+  "/images/otraPortada.webp",
   "/images/animal-crossing-winter-pfj1ezjg2zhif7ju.jpg",
   "/images/ankha-animal-crossing-6yflin5hrafqsehx.jpg",
 ];
