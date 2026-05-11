@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
 
 type DbPlaylist = { id: string; nombre: string; accent: string; bg: string };
 type DbCancion  = { id: string; titulo: string; artista: string; accent?: string; duracion?: number; position: number };
+type DbCancionSearch = { id: string; titulo: string; duracion: number; artista: string; caratula?: string };
 
 /* ── Estrellas: dos capas, muchas y densas ── */
 const STAR_COLORS = ["#ffffff","#ffffff","#ffffff","#ffffffdd","#1CF09466","#5eead455","#a3ff4744","#6e2fff55","#cc88ff66","#aaddff55","#ffffff88"];
@@ -209,6 +210,25 @@ export default function PlaylistDetailPage() {
   const [canciones, setCanciones] = useState<DbCancion[]>([]);
   const [likedSet, setLikedSet]   = useState<Set<string>>(new Set());
 
+  // Menú opciones
+  const [menuOpen, setMenuOpen]         = useState(false);
+  const [menuPos, setMenuPos]           = useState({ top: 0, left: 0 });
+  const menuRef                         = useRef<HTMLDivElement>(null);
+  const menuBtnRef                      = useRef<HTMLButtonElement>(null);
+  // Editar nombre
+  const [editNombre, setEditNombre]   = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  // Editar carátula (color de acento)
+  const [editCaratula, setEditCaratula] = useState(false);
+  const ACCENT_OPTIONS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c","#ff5078","#00ffcc","#ffcc00"];
+  // Borrar
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Añadir canciones
+  const [addSongModal, setAddSongModal]   = useState(false);
+  const [songSearch, setSongSearch]       = useState("");
+  const [searchResults, setSearchResults] = useState<DbCancionSearch[]>([]);
+  const [addFeedback, setAddFeedback]     = useState<string | null>(null);
+
   const playlistId = params.id_playlist as string;
 
   useEffect(() => {
@@ -251,6 +271,81 @@ export default function PlaylistDetailPage() {
   const tracks = canciones.map(c => ({ title: c.titulo, artist: c.artista, accent: c.accent, duration: c.duracion }));
   const totalDuration = canciones.reduce((acc, c) => acc + (c.duracion ?? 0), 0);
   const accent = playlist?.accent ?? "#1CF094";
+
+  // Cerrar menú al clicar fuera
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Buscar canciones para añadir
+  useEffect(() => {
+    if (!songSearch.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => {
+      fetch(`/api/canciones?limit=200`)
+        .then(r => r.json())
+        .then((data: DbCancionSearch[]) => {
+          if (!Array.isArray(data)) return;
+          const q = songSearch.toLowerCase();
+          setSearchResults(data.filter(c => c.titulo?.toLowerCase().includes(q) || c.artista?.toLowerCase().includes(q)).slice(0, 8));
+        });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [songSearch]);
+
+  const saveNombre = async () => {
+    if (!nuevoNombre.trim() || !playlist) return;
+    const res = await fetch(`/api/playlists/${playlistId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre: nuevoNombre.trim() }),
+    });
+    if (res.ok) {
+      setPlaylist(prev => prev ? { ...prev, nombre: nuevoNombre.trim() } : prev);
+      setEditNombre(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const saveAccent = async (newAccent: string) => {
+    const newBg = `linear-gradient(135deg,${newAccent}22,transparent)`;
+    const res = await fetch(`/api/playlists/${playlistId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accent: newAccent, bg: newBg }),
+    });
+    if (res.ok) {
+      setPlaylist(prev => prev ? { ...prev, accent: newAccent, bg: newBg } : prev);
+      setEditCaratula(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const deletePlaylist = async () => {
+    await fetch(`/api/playlists/${playlistId}`, { method: "DELETE" });
+    router.replace("/playlists");
+  };
+
+  const addCancionToPlaylist = async (c: DbCancionSearch) => {
+    const res = await fetch(`/api/playlists/${playlistId}/canciones`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titulo: c.titulo, artista: c.artista, accent: accent, duracion: c.duracion }),
+    });
+    if (res.status === 409) {
+      setAddFeedback("Ya está en la playlist");
+    } else if (res.ok) {
+      const nueva = await res.json();
+      setCanciones(prev => [...prev, nueva]);
+      setAddFeedback(`"${c.titulo}" añadida`);
+    } else {
+      setAddFeedback("Error al añadir");
+    }
+    setTimeout(() => setAddFeedback(null), 2000);
+  };
 
   const toggleLike = async (c: DbCancion, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -396,7 +491,7 @@ export default function PlaylistDetailPage() {
                 {totalDuration > 0 && ` · ${fmt(totalDuration)}`}
               </p>
 
-              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
                 <button className="play-all-btn" onClick={() => tracks.length > 0 && playTrack(tracks[0], tracks)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="#061210"><polygon points="5,3 19,12 5,21" /></svg>
                   Reproducir todo
@@ -417,6 +512,33 @@ export default function PlaylistDetailPage() {
                   </svg>
                   Aleatorio
                 </button>
+
+                {/* Botón añadir canciones */}
+                <button
+                  className="shuffle-btn"
+                  onClick={() => { setSongSearch(""); setSearchResults([]); setAddSongModal(true); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Añadir canciones
+                </button>
+
+                {/* Menú opciones ⋯ */}
+                <button
+                  ref={menuBtnRef}
+                  onClick={() => {
+                    if (menuBtnRef.current) {
+                      const r = menuBtnRef.current.getBoundingClientRect();
+                      setMenuPos({ top: r.bottom + 8, left: r.right - 190 });
+                    }
+                    setMenuOpen(o => !o);
+                  }}
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "50%", width: "40px", height: "40px", cursor: "pointer", color: "rgba(255,255,255,0.7)", fontSize: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.15s" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                  title="Opciones"
+                >⋯</button>
               </div>
             </div>
           </div>
@@ -541,6 +663,129 @@ export default function PlaylistDetailPage() {
         </div>
 
       </div>
+
+      {/* ── Dropdown menú opciones (fuera del glass-panel para evitar stacking context) ── */}
+      {menuOpen && (
+        <div ref={menuRef} style={{ position: "fixed", top: menuPos.top, left: menuPos.left, zIndex: 400, background: "rgba(10,15,26,0.97)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "14px", padding: "6px", minWidth: "190px", boxShadow: "0 16px 48px rgba(0,0,0,0.7)", backdropFilter: "blur(16px)" }}>
+          {[
+            { label: "✏️ Cambiar nombre", action: () => { setNuevoNombre(playlist.nombre); setEditNombre(true); setMenuOpen(false); } },
+            { label: "🎨 Editar carátula", action: () => { setEditCaratula(true); setMenuOpen(false); } },
+            { label: "🗑️ Borrar playlist",  action: () => { setConfirmDelete(true); setMenuOpen(false); }, danger: true },
+          ].map(item => (
+            <button
+              key={item.label}
+              onClick={item.action}
+              style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", borderRadius: "8px", padding: "10px 14px", cursor: "pointer", color: item.danger ? "#ff5078" : "rgba(255,255,255,0.8)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", fontWeight: 600, transition: "background 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.background = item.danger ? "rgba(255,80,120,0.1)" : "rgba(255,255,255,0.07)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "none")}
+            >{item.label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Modal cambiar nombre ── */}
+      {editNombre && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,4,12,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setEditNombre(false)}>
+          <div style={{ background: "linear-gradient(145deg,#0d1a12,#0a0f1a)", border: `1px solid ${accent}33`, borderRadius: "20px", padding: "28px 24px", width: "100%", maxWidth: "340px", boxShadow: "0 40px 100px rgba(0,0,0,0.8)" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 16px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1rem" }}>Cambiar nombre</h3>
+            <input
+              autoFocus
+              value={nuevoNombre}
+              onChange={e => setNuevoNombre(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") saveNombre(); if (e.key === "Escape") setEditNombre(false); }}
+              style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${accent}44`, borderRadius: "10px", padding: "10px 14px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.9rem", outline: "none", width: "100%", marginBottom: "12px" }}
+            />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={saveNombre} disabled={!nuevoNombre.trim()} style={{ flex: 1, background: `linear-gradient(135deg,${accent},${accent}aa)`, border: "none", borderRadius: "10px", padding: "10px", color: "#0a0f1a", fontWeight: 800, fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", cursor: "pointer", opacity: nuevoNombre.trim() ? 1 : 0.5 }}>Guardar</button>
+              <button onClick={() => setEditNombre(false)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 14px", color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", cursor: "pointer" }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal editar carátula (color) ── */}
+      {editCaratula && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,4,12,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setEditCaratula(false)}>
+          <div style={{ background: "linear-gradient(145deg,#0d1a12,#0a0f1a)", border: `1px solid ${accent}33`, borderRadius: "20px", padding: "28px 24px", width: "100%", maxWidth: "340px", boxShadow: "0 40px 100px rgba(0,0,0,0.8)" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 6px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1rem" }}>Editar carátula</h3>
+            <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.35)", fontSize: "0.78rem", fontFamily: "Arial, sans-serif" }}>Elige un color de acento</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
+              {ACCENT_OPTIONS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => saveAccent(c)}
+                  style={{ width: "40px", height: "40px", borderRadius: "50%", background: c, border: c === accent ? "3px solid white" : "3px solid transparent", cursor: "pointer", boxShadow: `0 0 12px ${c}88`, transition: "transform 0.15s", flexShrink: 0 }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.15)")}
+                  onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal confirmar borrar ── */}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,4,12,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setConfirmDelete(false)}>
+          <div style={{ background: "linear-gradient(145deg,#1a0a0f,#0a0f1a)", border: "1px solid rgba(255,80,120,0.25)", borderRadius: "20px", padding: "28px 24px", width: "100%", maxWidth: "340px", boxShadow: "0 40px 100px rgba(0,0,0,0.8)" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 8px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1rem" }}>¿Borrar playlist?</h3>
+            <p style={{ margin: "0 0 24px", color: "rgba(255,255,255,0.4)", fontSize: "0.82rem", fontFamily: "Arial, sans-serif" }}>Esta acción no se puede deshacer.</p>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={deletePlaylist} style={{ flex: 1, background: "linear-gradient(135deg,#ff5078,#ff80a0)", border: "none", borderRadius: "10px", padding: "10px", color: "white", fontWeight: 800, fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", cursor: "pointer" }}>Sí, borrar</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px", padding: "10px 14px", color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", cursor: "pointer" }}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal añadir canciones ── */}
+      {addSongModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,4,12,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setAddSongModal(false)}>
+          <div style={{ background: "linear-gradient(145deg,#0d1a12,#0a0f1a)", border: `1px solid ${accent}33`, borderRadius: "20px", padding: "28px 24px", width: "100%", maxWidth: "400px", boxShadow: "0 40px 100px rgba(0,0,0,0.8)" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 16px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1rem" }}>Añadir canciones</h3>
+            <input
+              autoFocus
+              value={songSearch}
+              onChange={e => setSongSearch(e.target.value)}
+              placeholder="Buscar canción o artista…"
+              style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${accent}44`, borderRadius: "10px", padding: "10px 14px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", outline: "none", width: "100%", marginBottom: "12px" }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "280px", overflowY: "auto" }}>
+              {songSearch.trim() && searchResults.length === 0 && (
+                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.82rem", fontFamily: "var(--font-nunito), sans-serif", textAlign: "center", padding: "16px 0" }}>Sin resultados</p>
+              )}
+              {searchResults.map(c => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 10px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {c.caratula
+                    ? <img src={c.caratula} alt={c.titulo} style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover", flexShrink: 0 }} />
+                    : <div style={{ width: "36px", height: "36px", borderRadius: "6px", background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "rgba(255,255,255,0.3)" }}>♪</div>
+                  }
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.titulo}</div>
+                    <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>{c.artista}</div>
+                  </div>
+                  <button
+                    onClick={() => addCancionToPlaylist(c)}
+                    style={{ background: `rgba(${accent === "#1CF094" ? "28,240,148" : "28,240,148"},0.12)`, border: `1px solid ${accent}44`, borderRadius: "8px", padding: "6px 12px", color: accent, fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.8rem", cursor: "pointer", flexShrink: 0, transition: "background 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = `${accent}22`)}
+                    onMouseLeave={e => (e.currentTarget.style.background = `${accent}12`)}
+                  >+ Añadir</button>
+                </div>
+              ))}
+            </div>
+            {addFeedback && (
+              <p style={{ margin: "12px 0 0", color: accent, fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.82rem", textAlign: "center", fontWeight: 700 }}>{addFeedback}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast feedback general */}
+      {addFeedback && !addSongModal && (
+        <div style={{ position: "fixed", bottom: "90px", left: "50%", transform: "translateX(-50%)", background: "rgba(28,240,148,0.15)", border: "1px solid rgba(28,240,148,0.35)", borderRadius: "50px", padding: "10px 22px", color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem", zIndex: 600, backdropFilter: "blur(8px)", whiteSpace: "nowrap" }}>
+          {addFeedback}
+        </div>
+      )}
     </div>
   );
 }

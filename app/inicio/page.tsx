@@ -246,6 +246,28 @@ const css = `
   .hover-card:hover {
     box-shadow: 0 0 0 1px rgba(28,240,148,0.28), 0 8px 32px rgba(0,0,0,0.4);
   }
+
+  @keyframes album-glow {
+    0%, 100% { box-shadow: 0 0 12px 2px var(--ac, #1CF094), 0 0 32px 6px var(--ac2, #1CF09444); }
+    50%       { box-shadow: 0 0 24px 6px var(--ac, #1CF094), 0 0 60px 16px var(--ac2, #1CF09444); }
+  }
+  .album-card {
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.9s cubic-bezier(0.34,1.1,0.64,1),
+                opacity 0.9s cubic-bezier(0.4,0,0.2,1),
+                border-color 0.9s ease,
+                box-shadow 0.9s ease;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.04);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .album-card.active {
+    border-color: var(--ac, #1CF094);
+    animation: album-glow 2s ease-in-out infinite;
+  }
 `;
 
 const ACCENTS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c"];
@@ -375,7 +397,8 @@ export default function InicioPage() {
   const [albums, setAlbums]             = useState<AlbumDB[]>([]);
   const [addModal, setAddModal]         = useState<Track | null>(null);
   const [addFeedback, setAddFeedback]   = useState<string | null>(null);
-  const [carouselIdx, setCarouselIdx]   = useState(0);
+  const [activeAlbum, setActiveAlbum]   = useState(-1);
+  const [windowStart, setWindowStart]   = useState(0);
   const CAROUSEL_VISIBLE = 5;
 
   const enterSection = (which: 'mix' | 'hits') => {
@@ -471,6 +494,7 @@ export default function InicioPage() {
       }
     })();
   }, []);
+
 
   const toggleLike = async (track: Track, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -890,20 +914,27 @@ export default function InicioPage() {
         </div>
 
         {/* ── Nuevos lanzamientos ── */}
-        <section style={{ animation: mounted ? "fade-in-up 0.6s ease 0.34s both" : "none" }}>
+        <section
+          style={{ animation: mounted ? "fade-in-up 0.6s ease 0.34s both" : "none" }}
+          onMouseLeave={() => setActiveAlbum(-1)}
+        >
           <SectionTitle>Nuevos lanzamientos</SectionTitle>
-          <div style={{ position: "relative", marginTop: "16px" }}>
+          <div style={{ position: "relative", marginTop: "16px", overflow: "visible" }}>
             {/* Flecha izquierda */}
             <button
-              onClick={() => setCarouselIdx(i => Math.max(0, i - 1))}
-              disabled={carouselIdx === 0}
+              onClick={() => {
+                const nextActive = Math.max(0, activeAlbum <= 0 ? 0 : activeAlbum - 1);
+                setActiveAlbum(nextActive);
+                setWindowStart(Math.max(0, Math.min(nextActive, albums.length - CAROUSEL_VISIBLE)));
+              }}
+              disabled={activeAlbum <= 0}
               style={{
                 position: "absolute", left: "-28px", top: "50%", transform: "translateY(-50%)",
                 zIndex: 10, width: "36px", height: "36px", borderRadius: "50%",
-                background: carouselIdx === 0 ? "rgba(255,255,255,0.06)" : "rgba(28,240,148,0.18)",
-                border: `1px solid ${carouselIdx === 0 ? "rgba(255,255,255,0.1)" : "rgba(28,240,148,0.4)"}`,
-                color: carouselIdx === 0 ? "rgba(255,255,255,0.2)" : "#1CF094",
-                cursor: carouselIdx === 0 ? "default" : "pointer",
+                background: activeAlbum <= 0 ? "rgba(255,255,255,0.06)" : "rgba(28,240,148,0.18)",
+                border: `1px solid ${activeAlbum <= 0 ? "rgba(255,255,255,0.1)" : "rgba(28,240,148,0.4)"}`,
+                color: activeAlbum <= 0 ? "rgba(255,255,255,0.2)" : "#1CF094",
+                cursor: activeAlbum <= 0 ? "default" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "1rem", fontWeight: 700,
                 transition: "background 0.2s, border-color 0.2s, color 0.2s",
@@ -911,18 +942,39 @@ export default function InicioPage() {
             >‹</button>
 
             {/* Álbumes visibles */}
-            <div style={{ display: "flex", gap: "14px", overflow: "hidden" }}>
-              {albums.slice(carouselIdx, carouselIdx + CAROUSEL_VISIBLE).map((album, i) => {
-                const realIdx = carouselIdx + i;
+            <div
+              style={{
+                display: "flex",
+                gap: "14px",
+                overflow: "visible",
+                paddingTop: "14px",
+                paddingBottom: "14px",
+                alignItems: "center",
+              }}
+            >
+              {albums.slice(windowStart, windowStart + CAROUSEL_VISIBLE).map((album, i) => {
+                const realIdx = windowStart + i;
                 const accent = ACCENTS[realIdx % ACCENTS.length];
+                const isActive = realIdx === activeAlbum;
+                const scale = isActive ? 1.08 : 1;
+                const imgH = isActive ? 155 : 120;
                 return (
                   <div
                     key={album.id}
-                    className="dash-card"
-                    style={{ flex: `0 0 calc((100% - ${(CAROUSEL_VISIBLE - 1) * 14}px) / ${CAROUSEL_VISIBLE})`, overflow: "hidden", padding: 0, transition: "opacity 0.3s" }}
+                    className={`album-card${isActive ? " active" : ""}`}
+                    style={{
+                      flex: `0 0 calc((100% - ${(CAROUSEL_VISIBLE - 1) * 14}px) / ${CAROUSEL_VISIBLE})`,
+                      padding: 0,
+                      transform: `scale(${scale})`,
+                      opacity: isActive ? 1 : 0.72,
+                      zIndex: isActive ? 5 : 1,
+                      ["--ac" as string]: accent,
+                      ["--ac2" as string]: `${accent}44`,
+                    } as React.CSSProperties}
+                    onMouseEnter={() => setActiveAlbum(realIdx)}
                     onClick={() => router.push(`/artistas/${toSlug(album.artista)}`)}
                   >
-                    <div style={{ height: "120px", position: "relative", overflow: "hidden" }}>
+                    <div style={{ height: `${imgH}px`, position: "relative", overflow: "hidden", transition: "height 0.55s cubic-bezier(0.4,0,0.2,1)" }}>
                       {album.caratula ? (
                         <img src={album.caratula} alt={album.titulo} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
@@ -955,15 +1007,19 @@ export default function InicioPage() {
 
             {/* Flecha derecha */}
             <button
-              onClick={() => setCarouselIdx(i => Math.min(albums.length - CAROUSEL_VISIBLE, i + 1))}
-              disabled={carouselIdx >= albums.length - CAROUSEL_VISIBLE}
+              onClick={() => {
+                const nextActive = Math.min(albums.length - 1, activeAlbum < 0 ? 0 : activeAlbum + 1);
+                setActiveAlbum(nextActive);
+                setWindowStart(Math.max(0, Math.min(nextActive - CAROUSEL_VISIBLE + 1, albums.length - CAROUSEL_VISIBLE)));
+              }}
+              disabled={activeAlbum >= albums.length - 1}
               style={{
                 position: "absolute", right: "-28px", top: "50%", transform: "translateY(-50%)",
                 zIndex: 10, width: "36px", height: "36px", borderRadius: "50%",
-                background: carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "rgba(255,255,255,0.06)" : "rgba(28,240,148,0.18)",
-                border: `1px solid ${carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "rgba(255,255,255,0.1)" : "rgba(28,240,148,0.4)"}`,
-                color: carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "rgba(255,255,255,0.2)" : "#1CF094",
-                cursor: carouselIdx >= albums.length - CAROUSEL_VISIBLE ? "default" : "pointer",
+                background: activeAlbum >= albums.length - 1 ? "rgba(255,255,255,0.06)" : "rgba(28,240,148,0.18)",
+                border: `1px solid ${activeAlbum >= albums.length - 1 ? "rgba(255,255,255,0.1)" : "rgba(28,240,148,0.4)"}`,
+                color: activeAlbum >= albums.length - 1 ? "rgba(255,255,255,0.2)" : "#1CF094",
+                cursor: activeAlbum >= albums.length - 1 ? "default" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "1rem", fontWeight: 700,
                 transition: "background 0.2s, border-color 0.2s, color 0.2s",
@@ -976,11 +1032,11 @@ export default function InicioPage() {
                 {Array.from({ length: albums.length - CAROUSEL_VISIBLE + 1 }).map((_, i) => (
                   <button
                     key={i}
-                    onClick={() => setCarouselIdx(i)}
+                    onClick={() => { setWindowStart(i); setActiveAlbum(-1); }}
                     style={{
-                      width: carouselIdx === i ? "18px" : "6px",
+                      width: windowStart === i ? "18px" : "6px",
                       height: "6px", borderRadius: "3px",
-                      background: carouselIdx === i ? "#1CF094" : "rgba(255,255,255,0.2)",
+                      background: windowStart === i ? "#1CF094" : "rgba(255,255,255,0.2)",
                       border: "none", cursor: "pointer", padding: 0,
                       transition: "width 0.25s, background 0.25s",
                     }}

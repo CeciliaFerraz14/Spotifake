@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
 import type { Track } from "@/app/context/PlayerContext";
+import { useRef } from "react";
 
 /* ── Estrellas densas vía láctea ── */
 const STAR_COLORS = ["#ffffff","#ffffff","#ffffff","#ffffffdd","#1CF09466","#5eead455","#a3ff4744","#6e2fff55","#cc88ff66","#aaddff55","#ffffff88"];
@@ -44,6 +45,19 @@ const css = `
     0%   { background-position: -200% center; }
     100% { background-position:  200% center; }
   }
+
+  .shuffle-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,80,120,0.08);
+    border: 1px solid rgba(255,80,120,0.22);
+    border-radius: 50px; padding: 12px 26px; cursor: pointer;
+    color: rgba(255,255,255,0.85); font-weight: 700; font-size: 0.9rem;
+    font-family: var(--font-nunito), sans-serif;
+    backdrop-filter: blur(10px);
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+  }
+  .shuffle-btn:hover      { background: rgba(255,80,120,0.15); color: #ff5078; border-color: rgba(255,80,120,0.45); }
+  .shuffle-btn.shuffle-on { background: rgba(255,80,120,0.18); color: #ff5078; border-color: rgba(255,80,120,0.5); box-shadow: 0 0 16px rgba(255,80,120,0.25); }
   @keyframes heartbeat {
     0%   { transform: scale(1); }
     25%  { transform: scale(1.5); }
@@ -138,6 +152,7 @@ const css = `
 `;
 
 type LikedSong = { id: string; titulo: string; artista: string; accent?: string; duracion?: number };
+type CancionSearch = { id: string; titulo: string; artista: string; duracion: number; caratula?: string };
 
 function fmt(s: number) {
   const m = Math.floor(s / 60);
@@ -161,11 +176,15 @@ function EqBars() {
 export default function LikedPage() {
   const router   = useRouter();
   const supabase = createClient();
-  const { playTrack, track: currentTrack, playing } = usePlayer();
+  const { playTrack, track: currentTrack, playing, shuffle, toggleShuffle } = usePlayer();
 
-  const [songs, setSongs]       = useState<LikedSong[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [mounted, setMounted]   = useState(false);
+  const [songs, setSongs]           = useState<LikedSong[]>([]);
+  const [cargando, setCargando]     = useState(true);
+  const [mounted, setMounted]       = useState(false);
+  const [addSongModal, setAddSongModal]   = useState(false);
+  const [songSearch, setSongSearch]       = useState("");
+  const [searchResults, setSearchResults] = useState<CancionSearch[]>([]);
+  const [addFeedback, setAddFeedback]     = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -180,6 +199,42 @@ export default function LikedPage() {
       setCargando(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!songSearch.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => {
+      fetch(`/api/canciones?limit=200`)
+        .then(r => r.json())
+        .then((data: CancionSearch[]) => {
+          if (!Array.isArray(data)) return;
+          const q = songSearch.toLowerCase();
+          setSearchResults(data.filter(c => c.titulo?.toLowerCase().includes(q) || c.artista?.toLowerCase().includes(q)).slice(0, 8));
+        });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [songSearch]);
+
+  const addToLiked = async (c: CancionSearch) => {
+    const key = `${c.titulo}|${c.artista}`;
+    if (songs.some(s => s.titulo === c.titulo && s.artista === c.artista)) {
+      setAddFeedback("Ya está en Me gusta");
+      setTimeout(() => setAddFeedback(null), 2000);
+      return;
+    }
+    const res = await fetch('/api/likes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: c.titulo, artista: c.artista, accent: "#ff5078", duracion: c.duracion }),
+    });
+    if (res.ok) {
+      const nueva = await res.json();
+      setSongs(prev => [...prev, nueva]);
+      setAddFeedback(`"${c.titulo}" añadida`);
+    } else {
+      setAddFeedback("Error al añadir");
+    }
+    setTimeout(() => setAddFeedback(null), 2000);
+  };
 
   const unlike = async (song: LikedSong, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -308,12 +363,37 @@ export default function LikedPage() {
               </p>
 
               {songs.length > 0 && (
-                <button className="play-all-btn" onClick={() => playTrack(asTracks()[0], asTracks())}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                    <polygon points="5,3 19,12 5,21" />
-                  </svg>
-                  Reproducir todo
-                </button>
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  <button className="play-all-btn" onClick={() => playTrack(asTracks()[0], asTracks())}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                      <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                    Reproducir todo
+                  </button>
+                  <button
+                    className={`shuffle-btn${shuffle ? " shuffle-on" : ""}`}
+                    onClick={() => {
+                      toggleShuffle();
+                      const t = asTracks();
+                      if (t.length > 0) playTrack(t[Math.floor(Math.random() * t.length)], t);
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                      <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                    </svg>
+                    Aleatorio
+                  </button>
+                  <button
+                    className="shuffle-btn"
+                    onClick={() => { setSongSearch(""); setSearchResults([]); setAddSongModal(true); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Añadir canciones
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -397,6 +477,80 @@ export default function LikedPage() {
         </div>
 
       </div>
+
+      {/* ── Modal añadir canciones ── */}
+      {addSongModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }} onClick={() => setAddSongModal(false)}>
+          <div style={{
+            background: "linear-gradient(145deg, #1a0a3a, #0d0820)",
+            border: "1px solid rgba(255,80,120,0.25)", borderRadius: "18px",
+            padding: "28px", width: "min(520px, 94vw)", maxHeight: "80vh",
+            display: "flex", flexDirection: "column", gap: "16px",
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: 0, color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900 }}>
+              Añadir canciones
+            </h3>
+            <input
+              autoFocus
+              value={songSearch}
+              onChange={e => setSongSearch(e.target.value)}
+              placeholder="Buscar canciones..."
+              style={{
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,80,120,0.22)",
+                borderRadius: "10px", padding: "10px 14px", color: "white",
+                fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.9rem", outline: "none",
+              }}
+            />
+            {addFeedback && (
+              <div style={{ color: "#ff5078", fontSize: "0.83rem", fontFamily: "var(--font-nunito), sans-serif" }}>
+                {addFeedback}
+              </div>
+            )}
+            <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+              {searchResults.length === 0 && songSearch.trim() && (
+                <div style={{ color: "rgba(255,255,255,0.35)", textAlign: "center", padding: "24px 0", fontFamily: "var(--font-nunito), sans-serif" }}>
+                  Sin resultados
+                </div>
+              )}
+              {searchResults.map(c => (
+                <div key={c.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "10px 12px", borderRadius: "10px",
+                  transition: "background 0.15s", cursor: "default",
+                  background: "rgba(255,255,255,0.03)",
+                }}>
+                  <div>
+                    <div style={{ color: "white", fontWeight: 700, fontSize: "0.88rem", fontFamily: "var(--font-nunito), sans-serif" }}>{c.titulo}</div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.74rem", fontFamily: "Arial, sans-serif" }}>{c.artista}</div>
+                  </div>
+                  <button
+                    onClick={() => addToLiked(c)}
+                    style={{
+                      background: "rgba(255,80,120,0.12)", border: "1px solid rgba(255,80,120,0.3)",
+                      borderRadius: "50%", width: 32, height: 32, cursor: "pointer",
+                      color: "#ff5078", fontSize: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >+</button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setAddSongModal(false)}
+              style={{
+                background: "rgba(255,80,120,0.1)", border: "1px solid rgba(255,80,120,0.25)",
+                borderRadius: "10px", padding: "10px", color: "rgba(255,255,255,0.6)",
+                cursor: "pointer", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700,
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

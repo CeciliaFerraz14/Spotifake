@@ -62,7 +62,6 @@ const footerCss = `
 
 const navLinks = [
   { label: "Inicio", href: "/inicio" },
-  { label: "Discos", href: "/discos" },
   { label: "FAQ", href: "/faq" },
 ];
 
