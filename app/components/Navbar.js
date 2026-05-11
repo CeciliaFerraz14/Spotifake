@@ -494,24 +494,12 @@ export default function Navbar() {
                 />
               ))}
             </div>
-            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "9px", textDecoration: "none" }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
               <img
-                src="/images/logo.jpeg"
+                src="/images/ChatGPT Image 11 may 2026, 11_04_21 a.m..png"
                 alt="SpotiFake"
-                style={{ width: "34px", height: "34px", borderRadius: "50%", objectFit: "cover" }}
+                style={{ height: "82px", objectFit: "contain", display: "block", marginTop: "10px" }}
               />
-              <span style={{
-                fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
-                fontWeight: 900,
-                fontSize: "1.1rem",
-                background: "linear-gradient(90deg, #1CF094, #5eead4)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                letterSpacing: "-0.3px",
-              }}>
-                SpotiFake
-              </span>
             </Link>
           </div>
 
