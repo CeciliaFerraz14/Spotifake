@@ -4,7 +4,15 @@ import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { usePlayer } from "@/app/context/PlayerContext";
 
-type DbPlaylist = { id: string; nombre: string; accent: string; bg: string };
+type DbPlaylist = { id: string; nombre: string; accent: string; bg: string; image_url?: string | null };
+
+const COLOR_OPTIONS = [
+  { accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)" },
+  { accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)" },
+  { accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)" },
+  { accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)" },
+  { accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)" },
+];
 type DbCancion  = { id: string; titulo: string; artista: string; accent?: string; duracion?: number; position: number };
 
 /* ── Estrellas: dos capas, muchas y densas ── */
@@ -146,6 +154,125 @@ const css = `
   .heart-btn.unliked { color: rgba(255,255,255,0.22); }
   .heart-btn:hover { transform: scale(1.2); }
 
+  .dots-btn-detail {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: rgba(28,240,148,0.1);
+    border: 1px solid rgba(28,240,148,0.25);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(255,255,255,0.85);
+    transition: background 0.18s, transform 0.18s, color 0.18s, border-color 0.18s;
+    backdrop-filter: blur(10px);
+  }
+  .dots-btn-detail:hover {
+    background: rgba(28,240,148,0.2);
+    color: #1CF094;
+    transform: scale(1.07);
+    border-color: rgba(28,240,148,0.5);
+  }
+
+  @keyframes ctx-in {
+    from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .ctx-menu {
+    position: fixed; z-index: 1000;
+    background: rgba(10, 18, 30, 0.95);
+    border: 1px solid rgba(28,240,148,0.25);
+    border-radius: 14px;
+    padding: 6px;
+    min-width: 200px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05);
+    animation: ctx-in 0.18s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .ctx-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 9px;
+    cursor: pointer; font-family: var(--font-nunito), sans-serif;
+    font-size: 0.84rem; font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    transition: background 0.15s, color 0.15s;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .ctx-item:hover { background: rgba(255,255,255,0.08); color: white; }
+  .ctx-item.danger:hover { background: rgba(255,60,60,0.12); color: #ff4d4d; }
+  .ctx-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 4px 8px; }
+
+  .modal-bd {
+    position: fixed; inset: 0; z-index: 800;
+    background: rgba(0,4,12,0.78);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-bx {
+    background: linear-gradient(145deg, #0d1a12, #0a0f1a);
+    border: 1px solid rgba(28,240,148,0.2);
+    border-radius: 20px; padding: 28px 24px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    animation: ctx-in 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .modal-input {
+    width: 100%; box-sizing: border-box;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 12px 16px;
+    color: white; font-size: 0.9rem;
+    font-family: var(--font-nunito), sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  .modal-input:focus { border-color: rgba(28,240,148,0.5); }
+  .color-dot {
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.selected { border-color: white; transform: scale(1.15); }
+  .cover-section-label {
+    display: block; color: rgba(255,255,255,0.5); font-size: 0.72rem;
+    font-family: var(--font-nunito), sans-serif; letter-spacing: 0.5px;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .cover-divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 22px 0 16px;
+    color: rgba(255,255,255,0.3);
+    font-size: 0.7rem; font-family: var(--font-nunito), sans-serif;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .cover-divider::before, .cover-divider::after {
+    content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.08);
+  }
+  .upload-zone {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed rgba(28,240,148,0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .upload-zone:hover { background: rgba(28,240,148,0.06); border-color: rgba(28,240,148,0.5); }
+  .upload-thumb {
+    width: 56px; height: 56px; border-radius: 10px;
+    object-fit: cover; flex-shrink: 0;
+    background: rgba(0,0,0,0.4);
+  }
+  .remove-img-btn {
+    background: rgba(255,80,80,0.1);
+    border: 1px solid rgba(255,80,80,0.3);
+    color: #ff7b7b;
+    padding: 7px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 0.78rem; font-weight: 700;
+    font-family: var(--font-nunito), sans-serif;
+    transition: background 0.15s;
+  }
+  .remove-img-btn:hover { background: rgba(255,80,80,0.18); }
+
   .col-header {
     color: rgba(255,255,255,0.35);
     font-size: 0.68rem;
@@ -209,6 +336,18 @@ export default function PlaylistDetailPage() {
   const [canciones, setCanciones] = useState<DbCancion[]>([]);
   const [likedSet, setLikedSet]   = useState<Set<string>>(new Set());
 
+  // Men� + modales
+  const [menuPos, setMenuPos]                   = useState<{ x: number; y: number } | null>(null);
+  const [renameOpen, setRenameOpen]             = useState(false);
+  const [renameValue, setRenameValue]           = useState("");
+  const [coverOpen, setCoverOpen]               = useState(false);
+  const [coverColorIdx, setCoverColorIdx]       = useState<number | null>(null);
+  const [coverFile, setCoverFile]               = useState<File | null>(null);
+  const [coverPreview, setCoverPreview]         = useState<string | null>(null);
+  const [coverRemoveImage, setCoverRemoveImage] = useState(false);
+  const [coverSaving, setCoverSaving]           = useState(false);
+  const [coverError, setCoverError]             = useState<string | null>(null);
+
   const playlistId = params.id_playlist as string;
 
   useEffect(() => {
@@ -270,6 +409,108 @@ export default function PlaylistDetailPage() {
         body: JSON.stringify({ titulo: c.titulo, artista: c.artista, accent: c.accent, duracion: c.duracion }),
       });
       setLikedSet(prev => new Set(prev).add(key));
+    }
+  };
+
+  const abrirMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 220;
+    const x = Math.min(Math.max(8, r.right - menuWidth), window.innerWidth - menuWidth - 8);
+    setMenuPos({ x, y: r.bottom + 6 });
+  };
+
+  const abrirRenombrar = () => {
+    if (!playlist) return;
+    setMenuPos(null);
+    setRenameValue(playlist.nombre);
+    setRenameOpen(true);
+  };
+
+  const confirmarRenombre = async () => {
+    if (!playlist || !renameValue.trim()) return;
+    const nombre = renameValue.trim();
+    const res = await fetch(`/api/playlists/${playlist.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+    if (res.ok) {
+      setPlaylist(prev => prev ? { ...prev, nombre } : prev);
+    }
+    setRenameOpen(false);
+    setRenameValue("");
+  };
+
+  const eliminarPlaylist = async () => {
+    if (!playlist) return;
+    setMenuPos(null);
+    if (!confirm(`�Eliminar la playlist �${playlist.nombre}�? Esta acci�n no se puede deshacer.`)) return;
+    const res = await fetch(`/api/playlists/${playlist.id}`, { method: 'DELETE' });
+    if (res.ok) router.replace('/playlists');
+  };
+
+  const abrirPortada = () => {
+    setMenuPos(null);
+    setCoverColorIdx(null);
+    setCoverFile(null);
+    setCoverPreview(null);
+    setCoverRemoveImage(false);
+    setCoverError(null);
+    setCoverOpen(true);
+  };
+
+  const cerrarPortada = () => {
+    setCoverOpen(false);
+    setCoverFile(null);
+    setCoverPreview(null);
+    setCoverColorIdx(null);
+    setCoverRemoveImage(false);
+    setCoverError(null);
+  };
+
+  const elegirArchivoPortada = (file: File | null) => {
+    setCoverError(null);
+    if (!file) { setCoverFile(null); setCoverPreview(null); return; }
+    if (file.size > 5 * 1024 * 1024) { setCoverError("La imagen no puede superar 5 MB"); return; }
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) { setCoverError("Formato no v�lido (JPG, PNG, WEBP o GIF)"); return; }
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+    setCoverRemoveImage(false);
+    setCoverColorIdx(null);
+  };
+
+  const guardarPortada = async () => {
+    if (!playlist) return;
+    setCoverSaving(true);
+    setCoverError(null);
+    try {
+      if (coverFile) {
+        const fd = new FormData();
+        fd.append('file', coverFile);
+        const res = await fetch(`/api/playlists/${playlist.id}/portada`, { method: 'POST', body: fd });
+        if (!res.ok) { setCoverError("No se pudo subir la imagen"); return; }
+        const { image_url } = await res.json();
+        setPlaylist(prev => prev ? { ...prev, image_url } : prev);
+      } else if (coverColorIdx !== null) {
+        const c = COLOR_OPTIONS[coverColorIdx];
+        const body: Record<string, string | null> = { accent: c.accent, bg: c.bg };
+        if (playlist.image_url) body.image_url = null;
+        const res = await fetch(`/api/playlists/${playlist.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) { setCoverError("No se pudo cambiar el color"); return; }
+        setPlaylist(prev => prev ? { ...prev, accent: c.accent, bg: c.bg, image_url: null } : prev);
+      } else if (coverRemoveImage && playlist.image_url) {
+        const res = await fetch(`/api/playlists/${playlist.id}/portada`, { method: 'DELETE' });
+        if (!res.ok) { setCoverError("No se pudo quitar la imagen"); return; }
+        setPlaylist(prev => prev ? { ...prev, image_url: null } : prev);
+      }
+      cerrarPortada();
+    } finally {
+      setCoverSaving(false);
     }
   };
 
@@ -364,8 +605,17 @@ export default function PlaylistDetailPage() {
               boxShadow: `0 16px 60px rgba(0,0,0,0.6), 0 0 40px ${accent}22`,
               border: `1px solid ${accent}22`,
               overflow: "hidden",
+              position: "relative",
             }}>
-              <Vinyl accent={accent} size={130} spinning={playing && canciones.some(c => c.titulo === currentTrack?.title)} />
+              {playlist.image_url ? (
+                <img
+                  src={playlist.image_url}
+                  alt={playlist.nombre}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <Vinyl accent={accent} size={130} spinning={playing && canciones.some(c => c.titulo === currentTrack?.title)} />
+              )}
             </div>
 
             {/* Info */}
@@ -416,6 +666,18 @@ export default function PlaylistDetailPage() {
                     <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
                   </svg>
                   Aleatorio
+                </button>
+                <button
+                  className="dots-btn-detail"
+                  onClick={abrirMenu}
+                  title="Opciones de la playlist"
+                  aria-label="Opciones de la playlist"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5"  cy="12" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="19" cy="12" r="2" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -541,6 +803,223 @@ export default function PlaylistDetailPage() {
         </div>
 
       </div>
+
+      {/* Men� contextual */}
+      {menuPos && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 999 }} onClick={() => setMenuPos(null)} />
+          <div className="ctx-menu" style={{ top: menuPos.y, left: menuPos.x }}>
+            <button className="ctx-item" onClick={abrirRenombrar}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Cambiar nombre
+            </button>
+            <button className="ctx-item" onClick={abrirPortada}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              Cambiar portada
+            </button>
+            <div className="ctx-divider" />
+            <button className="ctx-item danger" onClick={eliminarPlaylist}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4h6v2"/>
+              </svg>
+              Eliminar playlist
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Modal: Renombrar */}
+      {renameOpen && (
+        <div className="modal-bd" onClick={() => setRenameOpen(false)}>
+          <div className="modal-bx" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <h2 style={{ margin: 0, fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1.1rem", color: "white" }}>
+                Cambiar nombre
+              </h2>
+              <button onClick={() => setRenameOpen(false)} style={{
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "50%", width: "30px", height: "30px", color: "rgba(255,255,255,0.5)",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
+              }}>�</button>
+            </div>
+            <input
+              className="modal-input"
+              type="text"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") confirmarRenombre(); }}
+              autoFocus
+              maxLength={40}
+            />
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <button onClick={() => setRenameOpen(false)} style={{
+                flex: 1, padding: "10px", borderRadius: "10px",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.6)", cursor: "pointer",
+                fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.88rem",
+              }}>Cancelar</button>
+              <button onClick={confirmarRenombre} disabled={!renameValue.trim()} style={{
+                flex: 1, padding: "10px", borderRadius: "10px",
+                background: renameValue.trim() ? "linear-gradient(135deg, #1CF094, #5eead4)" : "rgba(255,255,255,0.08)",
+                border: "none", cursor: renameValue.trim() ? "pointer" : "not-allowed",
+                color: renameValue.trim() ? "#0a0f1a" : "rgba(255,255,255,0.25)",
+                fontFamily: "var(--font-nunito), sans-serif", fontWeight: 800, fontSize: "0.88rem",
+              }}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cambiar portada */}
+      {coverOpen && playlist && (
+        <div className="modal-bd" onClick={cerrarPortada}>
+          <div className="modal-bx" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <h2 style={{ margin: 0, fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1.1rem", color: "white" }}>
+                Cambiar portada
+              </h2>
+              <button onClick={cerrarPortada} style={{
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "50%", width: "30px", height: "30px", color: "rgba(255,255,255,0.5)",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem",
+              }}>�</button>
+            </div>
+
+            {/* Vista previa */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+              <div style={{
+                width: 130, height: 130, borderRadius: "14px", overflow: "hidden",
+                background: coverColorIdx !== null ? COLOR_OPTIONS[coverColorIdx].bg : playlist.bg,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                position: "relative",
+              }}>
+                {coverPreview ? (
+                  <img src={coverPreview} alt="preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : !coverRemoveImage && playlist.image_url && coverColorIdx === null ? (
+                  <img src={playlist.image_url} alt="actual" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <Vinyl accent={coverColorIdx !== null ? COLOR_OPTIONS[coverColorIdx].accent : playlist.accent} size={75} />
+                )}
+              </div>
+            </div>
+
+            <label className="cover-section-label">Elige un color</label>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+              {COLOR_OPTIONS.map((c, i) => (
+                <button
+                  key={i}
+                  className={`color-dot${coverColorIdx === i ? " selected" : ""}`}
+                  style={{ background: c.accent }}
+                  onClick={() => {
+                    setCoverColorIdx(i);
+                    setCoverFile(null);
+                    setCoverPreview(null);
+                    setCoverRemoveImage(false);
+                    setCoverError(null);
+                  }}
+                  aria-label={`Color ${i + 1}`}
+                />
+              ))}
+            </div>
+
+            <div className="cover-divider">o</div>
+
+            <label className="cover-section-label">Sube tu propia imagen</label>
+            <label className="upload-zone">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: "none" }}
+                onChange={e => elegirArchivoPortada(e.target.files?.[0] ?? null)}
+              />
+              {coverPreview ? (
+                <img src={coverPreview} alt="preview" className="upload-thumb" />
+              ) : playlist.image_url && !coverRemoveImage ? (
+                <img src={playlist.image_url} alt="actual" className="upload-thumb" />
+              ) : (
+                <div className="upload-thumb" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: "white", fontWeight: 700, fontSize: "0.85rem", fontFamily: "var(--font-nunito), sans-serif" }}>
+                  {coverFile ? coverFile.name : "Seleccionar imagen�"}
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.7rem", marginTop: 2, fontFamily: "Arial, sans-serif" }}>
+                  JPG, PNG, WEBP o GIF � m�x 5 MB
+                </div>
+              </div>
+            </label>
+
+            {playlist.image_url && !coverFile && !coverRemoveImage && (
+              <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  className="remove-img-btn"
+                  onClick={() => {
+                    setCoverRemoveImage(true);
+                    setCoverFile(null);
+                    setCoverPreview(null);
+                    setCoverColorIdx(null);
+                    setCoverError(null);
+                  }}
+                >
+                  Quitar imagen actual
+                </button>
+              </div>
+            )}
+            {coverRemoveImage && (
+              <div style={{ marginTop: 10, color: "#ff7b7b", fontSize: "0.78rem", fontFamily: "var(--font-nunito), sans-serif" }}>
+                Se quitar� la imagen al guardar.
+              </div>
+            )}
+
+            {coverError && (
+              <div style={{ marginTop: 12, color: "#ff7b7b", fontSize: "0.8rem", fontFamily: "var(--font-nunito), sans-serif" }}>
+                {coverError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "22px" }}>
+              <button onClick={cerrarPortada} style={{
+                flex: 1, padding: "10px", borderRadius: "10px",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "rgba(255,255,255,0.6)", cursor: "pointer",
+                fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.88rem",
+              }}>Cancelar</button>
+              <button
+                onClick={guardarPortada}
+                disabled={coverSaving || (coverFile === null && coverColorIdx === null && !coverRemoveImage)}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: "10px",
+                  background: (!coverSaving && (coverFile || coverColorIdx !== null || coverRemoveImage))
+                    ? "linear-gradient(135deg, #1CF094, #5eead4)" : "rgba(255,255,255,0.08)",
+                  border: "none",
+                  cursor: (!coverSaving && (coverFile || coverColorIdx !== null || coverRemoveImage)) ? "pointer" : "not-allowed",
+                  color: (!coverSaving && (coverFile || coverColorIdx !== null || coverRemoveImage)) ? "#0a0f1a" : "rgba(255,255,255,0.25)",
+                  fontFamily: "var(--font-nunito), sans-serif", fontWeight: 800, fontSize: "0.88rem",
+                }}
+              >
+                {coverSaving ? "Guardando�" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

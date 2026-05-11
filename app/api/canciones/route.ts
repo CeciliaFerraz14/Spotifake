@@ -2,14 +2,49 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 
 // GET /api/canciones?artista_id=UUID   — canciones de un artista
+// GET /api/canciones?album_id=UUID     — canciones de un álbum
 // GET /api/canciones?top=N             — top N por reproducciones (con nombre artista)
 // GET /api/canciones?limit=N           — N canciones (con nombre artista)
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const artista_id = searchParams.get('artista_id');
+  const album_id   = searchParams.get('album_id');
   const top        = searchParams.get('top');
   const limit      = searchParams.get('limit');
+
+  if (album_id) {
+    const { data: album } = await supabase
+      .from('albums')
+      .select('id_album, caratula, id_artista_fk')
+      .eq('id_album', album_id)
+      .single();
+
+    const { data, error } = await supabase
+      .from('canciones')
+      .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk')
+      .eq('id_album_fk', album_id)
+      .order('id_cancion', { ascending: true });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const caratula = album?.caratula
+      ? supabase.storage.from('caratulas').getPublicUrl(album.caratula).data.publicUrl
+      : null;
+
+    const { data: artista } = album?.id_artista_fk
+      ? await supabase.from('artistas').select('nombre').eq('id', album.id_artista_fk).single()
+      : { data: null };
+
+    return NextResponse.json((data ?? []).map((c: any) => ({
+      id: c.id_cancion,
+      titulo: c.titulo,
+      duracion: c.duracion,
+      num_reproducciones: c.num_reproducciones,
+      artista: artista?.nombre ?? '',
+      caratula,
+    })));
+  }
 
   if (artista_id) {
     // 1. Álbumes del artista (con carátula)

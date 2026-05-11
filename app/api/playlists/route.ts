@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('playlists')
-    .select('id, nombre, accent, bg, created_at, playlist_canciones(count)')
+    .select('id, nombre, accent, bg, image_url, created_at, playlist_canciones(count)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true });
 
@@ -19,6 +19,7 @@ export async function GET() {
     nombre: pl.nombre,
     accent: pl.accent,
     bg: pl.bg,
+    image_url: pl.image_url ?? null,
     created_at: pl.created_at,
     canciones: pl.playlist_canciones?.[0]?.count ?? 0,
   }));
@@ -40,5 +41,5 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ...data, canciones: 0 });
+  return NextResponse.json({ ...data, image_url: data.image_url ?? null, canciones: 0 });
 }

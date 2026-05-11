@@ -86,6 +86,19 @@ const css = `
     box-shadow: 0 8px 36px rgba(255,80,120,0.65);
   }
 
+  .shuffle-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,80,120,0.08);
+    border: 1px solid rgba(255,80,120,0.22);
+    border-radius: 50px; padding: 12px 26px; cursor: pointer;
+    color: rgba(255,255,255,0.85); font-weight: 700; font-size: 0.9rem;
+    font-family: var(--font-nunito), sans-serif;
+    backdrop-filter: blur(10px);
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+  }
+  .shuffle-btn:hover { background: rgba(255,80,120,0.15); color: #ff5078; border-color: rgba(255,80,120,0.45); }
+  .shuffle-btn.shuffle-on { background: rgba(255,80,120,0.18); color: #ff5078; border-color: rgba(255,80,120,0.5); box-shadow: 0 0 16px rgba(255,80,120,0.25); }
+
   /* Panel semitransparente rosa/rojo como el botón login pero en rosa */
   .glass-panel {
     background: rgba(255, 80, 120, 0.07);
@@ -161,7 +174,7 @@ function EqBars() {
 export default function LikedPage() {
   const router   = useRouter();
   const supabase = createClient();
-  const { playTrack, track: currentTrack, playing } = usePlayer();
+  const { playTrack, track: currentTrack, playing, shuffle, toggleShuffle } = usePlayer();
 
   const [songs, setSongs]       = useState<LikedSong[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -308,12 +321,29 @@ export default function LikedPage() {
               </p>
 
               {songs.length > 0 && (
-                <button className="play-all-btn" onClick={() => playTrack(asTracks()[0], asTracks())}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                    <polygon points="5,3 19,12 5,21" />
-                  </svg>
-                  Reproducir todo
-                </button>
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  <button className="play-all-btn" onClick={() => playTrack(asTracks()[0], asTracks())}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                      <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                    Reproducir todo
+                  </button>
+                  <button
+                    className={`shuffle-btn${shuffle ? " shuffle-on" : ""}`}
+                    onClick={() => {
+                      toggleShuffle();
+                      const tracks = asTracks();
+                      const r = Math.floor(Math.random() * tracks.length);
+                      playTrack(tracks[r], tracks);
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                      <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                    </svg>
+                    Aleatorio
+                  </button>
+                </div>
               )}
             </div>
           </div>

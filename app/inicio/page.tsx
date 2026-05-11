@@ -216,6 +216,28 @@ const css = `
     user-select: none; pointer-events: none; line-height: 1;
   }
 
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.92) translateY(16px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-input {
+    width: 100%; box-sizing: border-box;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 12px 16px;
+    color: white; font-size: 0.9rem;
+    font-family: var(--font-nunito), sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  .modal-input:focus { border-color: rgba(28,240,148,0.5); }
+  .color-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+  }
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.selected { border-color: white; transform: scale(1.15); }
+
   @keyframes backdrop-in {
     from { opacity: 0; }
     to   { opacity: 1; }
@@ -249,6 +271,14 @@ const css = `
 `;
 
 const ACCENTS = ["#1CF094","#6e2fff","#ff6ef7","#00d4ff","#ff9a00","#a3ff47","#ff3c3c"];
+
+const COLOR_OPTIONS = [
+  { accent: "#1CF094", bg: "linear-gradient(145deg,#001a00,#003a0a)" },
+  { accent: "#6e2fff", bg: "linear-gradient(145deg,#0d0020,#1a0040)" },
+  { accent: "#00d4ff", bg: "linear-gradient(145deg,#001520,#002a3a)" },
+  { accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)" },
+  { accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)" },
+];
 
 const EQ = Array.from({ length: 14 }, (_, i) => ({
   dur: `${(0.4 + (i % 5) * 0.1).toFixed(1)}s`,
@@ -376,6 +406,10 @@ export default function InicioPage() {
   const [addModal, setAddModal]         = useState<Track | null>(null);
   const [addFeedback, setAddFeedback]   = useState<string | null>(null);
   const [carouselIdx, setCarouselIdx]   = useState(0);
+  const [createOpen, setCreateOpen]     = useState(false);
+  const [pendingTrack, setPendingTrack] = useState<Track | null>(null);
+  const [nuevoNombre, setNuevoNombre]   = useState("");
+  const [colorIdx, setColorIdx]         = useState(0);
   const CAROUSEL_VISIBLE = 5;
 
   const enterSection = (which: 'mix' | 'hits') => {
@@ -509,6 +543,47 @@ export default function InicioPage() {
       setAddFeedback('Error al añadir');
     }
     setTimeout(() => setAddFeedback(null), 2500);
+  };
+
+  const abrirCrear = (track: Track) => {
+    setAddModal(null);
+    setPendingTrack(track);
+    setNuevoNombre("");
+    setColorIdx(0);
+    setCreateOpen(true);
+  };
+
+  const cerrarCrear = () => {
+    setCreateOpen(false);
+    setPendingTrack(null);
+    setNuevoNombre("");
+    setColorIdx(0);
+  };
+
+  const crearYAñadir = async () => {
+    const nombre = nuevoNombre.trim();
+    if (!nombre) return;
+    const color = COLOR_OPTIONS[colorIdx];
+    const res = await fetch('/api/playlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, accent: color.accent, bg: color.bg }),
+    });
+    if (!res.ok) { setAddFeedback('Error al crear la playlist'); setTimeout(() => setAddFeedback(null), 2500); cerrarCrear(); return; }
+    const nueva = await res.json();
+    setUserPlaylists(prev => [...prev, nueva]);
+    if (pendingTrack) {
+      await fetch(`/api/playlists/${nueva.id}/canciones`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: pendingTrack.title, artista: pendingTrack.artist, accent: pendingTrack.accent, duracion: pendingTrack.duration }),
+      });
+      setAddFeedback(`Añadida a ${nombre}`);
+    } else {
+      setAddFeedback(`Playlist "${nombre}" creada`);
+    }
+    setTimeout(() => setAddFeedback(null), 2500);
+    cerrarCrear();
   };
 
   const firstName  = user?.name?.split(" ")[0] ?? "";
@@ -1120,40 +1195,174 @@ export default function InicioPage() {
             <p style={{ margin: "0 0 20px", color: "rgba(255,255,255,0.35)", fontSize: "0.78rem", fontFamily: "Arial, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {addModal.title} · {addModal.artist}
             </p>
-            {userPlaylists.length === 0 ? (
-              <p style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.85rem", textAlign: "center", padding: "16px 0" }}>
-                No tienes playlists aún.{" "}
-                <span style={{ color: "#1CF094", cursor: "pointer" }} onClick={() => { setAddModal(null); router.push("/playlists"); }}>
-                  Crear una
-                </span>
-              </p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto" }}>
-                {userPlaylists.map(pl => (
-                  <button
-                    key={pl.id}
-                    onClick={() => addToPlaylist(pl.id, addModal)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "12px",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: "10px", padding: "10px 14px",
-                      cursor: "pointer", width: "100%", textAlign: "left",
-                      transition: "background 0.15s, border-color 0.15s",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLElement).style.borderColor = `${pl.accent}55`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
-                  >
-                    <div style={{ width: "28px", height: "28px", borderRadius: "6px", background: "rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: pl.accent, fontSize: "0.85rem" }}>♫</span>
-                    </div>
-                    <span style={{ color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem" }}>
-                      {pl.nombre}
-                    </span>
-                  </button>
-                ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
+              {userPlaylists.length === 0 ? (
+                <p style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-nunito), sans-serif", fontSize: "0.82rem", textAlign: "center", padding: "12px 0 4px" }}>
+                  Aún no tienes playlists.
+                </p>
+              ) : userPlaylists.map(pl => (
+                <button
+                  key={pl.id}
+                  onClick={() => addToPlaylist(pl.id, addModal!)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "12px",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "10px", padding: "10px 14px",
+                    cursor: "pointer", width: "100%", textAlign: "left",
+                    transition: "background 0.15s, border-color 0.15s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLElement).style.borderColor = `${pl.accent}55`; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.08)"; }}
+                >
+                  <div style={{ width: "28px", height: "28px", borderRadius: "6px", background: "rgba(255,255,255,0.08)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: pl.accent, fontSize: "0.85rem" }}>♫</span>
+                  </div>
+                  <span style={{ color: "white", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem" }}>
+                    {pl.nombre}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Separador + botón Nueva playlist */}
+            <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "14px 0 12px" }} />
+            <button
+              onClick={() => abrirCrear(addModal!)}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                width: "100%", background: "rgba(28,240,148,0.07)",
+                border: "1px dashed rgba(28,240,148,0.3)",
+                borderRadius: "10px", padding: "10px 14px",
+                cursor: "pointer", textAlign: "left",
+                transition: "background 0.15s, border-color 0.15s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(28,240,148,0.13)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(28,240,148,0.55)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(28,240,148,0.07)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(28,240,148,0.3)"; }}
+            >
+              <div style={{ width: "28px", height: "28px", borderRadius: "6px", background: "rgba(28,240,148,0.15)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1CF094" strokeWidth="3" strokeLinecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
               </div>
+              <span style={{ color: "#1CF094", fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.85rem" }}>
+                Nueva playlist
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Nueva playlist */}
+      {createOpen && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 600,
+            background: "rgba(0,4,12,0.82)", backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: "backdrop-in 0.25s ease both",
+          }}
+          onClick={cerrarCrear}
+        >
+          <div
+            style={{
+              background: "linear-gradient(145deg,#0d1a12,#0a0f1a)",
+              border: "1px solid rgba(28,240,148,0.2)",
+              borderRadius: "20px", padding: "32px 28px",
+              width: "100%", maxWidth: "400px",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05)",
+              animation: "modal-in 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+              <h2 style={{ margin: 0, fontFamily: "var(--font-nunito), sans-serif", fontWeight: 900, fontSize: "1.2rem", color: "white" }}>
+                Nueva playlist
+              </h2>
+              <button
+                onClick={cerrarCrear}
+                style={{
+                  background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "50%", width: "32px", height: "32px",
+                  color: "rgba(255,255,255,0.5)", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "1rem", transition: "background 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.13)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+              >×</button>
+            </div>
+
+            {pendingTrack && (
+              <p style={{ margin: "0 0 18px", color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", fontFamily: "Arial, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Se añadirá: {pendingTrack.title} · {pendingTrack.artist}
+              </p>
             )}
+
+            <label style={{
+              display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem",
+              fontFamily: "var(--font-nunito), sans-serif", letterSpacing: "0.5px",
+              textTransform: "uppercase", marginBottom: "8px",
+            }}>Nombre</label>
+            <input
+              className="modal-input"
+              type="text"
+              placeholder="Nombre de tu playlist…"
+              value={nuevoNombre}
+              onChange={e => setNuevoNombre(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") crearYAñadir(); }}
+              autoFocus
+              maxLength={40}
+            />
+
+            <label style={{
+              display: "block", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem",
+              fontFamily: "var(--font-nunito), sans-serif", letterSpacing: "0.5px",
+              textTransform: "uppercase", margin: "20px 0 10px",
+            }}>Color</label>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {COLOR_OPTIONS.map((c, i) => (
+                <button
+                  key={i}
+                  className={`color-dot${colorIdx === i ? " selected" : ""}`}
+                  style={{ background: c.accent }}
+                  onClick={() => setColorIdx(i)}
+                  aria-label={`Color ${i + 1}`}
+                />
+              ))}
+              <div style={{
+                marginLeft: "auto", width: "48px", height: "48px", borderRadius: "12px",
+                background: COLOR_OPTIONS[colorIdx].bg,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: `1px solid ${COLOR_OPTIONS[colorIdx].accent}44`, fontSize: "1.4rem",
+              }}>♫</div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "28px" }}>
+              <button
+                onClick={cerrarCrear}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: "10px",
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "rgba(255,255,255,0.6)", cursor: "pointer",
+                  fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700, fontSize: "0.88rem",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+              >Cancelar</button>
+              <button
+                onClick={crearYAñadir}
+                disabled={!nuevoNombre.trim()}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: "10px",
+                  background: nuevoNombre.trim() ? "linear-gradient(135deg,#1CF094,#5eead4)" : "rgba(255,255,255,0.08)",
+                  border: "none", cursor: nuevoNombre.trim() ? "pointer" : "not-allowed",
+                  color: nuevoNombre.trim() ? "#0a0f1a" : "rgba(255,255,255,0.25)",
+                  fontFamily: "var(--font-nunito), sans-serif", fontWeight: 800, fontSize: "0.88rem",
+                  boxShadow: nuevoNombre.trim() ? "0 4px 18px rgba(28,240,148,0.4)" : "none",
+                }}
+              >Crear</button>
+            </div>
           </div>
         </div>
       )}

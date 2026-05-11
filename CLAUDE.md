@@ -177,3 +177,18 @@ The project is built for Vercel deployment. Environment variables must be set in
 - Supabase handles authentication, database, and file storage
 - All UI components use Tailwind CSS (no CSS-in-JS libraries)
 - The music player is a simulated player (no actual audio playback in current state — audio playback logic can be added to `MusicPlayer.tsx` via HTML5 Audio API)
+
+
+## Skills
+-Antes de crear o modificar cualquier componente UI o página, lee:
+
+skills/frontend-design.md
+
+-Antes de crear o editar un documento Word (.docx), lee:
+
+skills/docx.md
+
+-Antes de crear o editar una presentación (.pptx), lee:
+
+skills/pptx.md
+

@@ -1,6 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { usePlayer } from "@/app/context/PlayerContext";
 
 const innerImages = [
   "/images/Portada_1.jpg",
@@ -494,6 +497,8 @@ function PlaylistCarouselSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const dragStartX = useRef<number | null>(null);
   const dragMoved  = useRef(false);
+  const router = useRouter();
+  const { playTrack } = usePlayer();
 
   useEffect(() => {
     fetch("/api/albums")
@@ -540,6 +545,29 @@ function PlaylistCarouselSection() {
     const delta = e.clientX - dragStartX.current;
     if (Math.abs(delta) > 40) { delta < 0 ? next() : prev(); }
     dragStartX.current = null;
+  };
+
+  const handleListenNow = async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/usuario"); return; }
+
+    const album = albums[active];
+    if (!album) return;
+
+    const res = await fetch(`/api/canciones?album_id=${album.id}`);
+    if (!res.ok) return;
+    const canciones = await res.json();
+    if (!Array.isArray(canciones) || canciones.length === 0) return;
+
+    const queue = canciones.map((c: any) => ({
+      title:    c.titulo,
+      artist:   c.artista || album.artista,
+      duration: c.duracion,
+      icon:     c.caratula || album.caratula || undefined,
+      accent:   ACCENTS[active % ACCENTS.length],
+    }));
+    playTrack(queue[0], queue);
   };
 
   return (
@@ -687,6 +715,7 @@ function PlaylistCarouselSection() {
         }}>
           <button
             key={active}
+            onClick={handleListenNow}
             style={{
               background: NEON,
               color: "#050a00",
