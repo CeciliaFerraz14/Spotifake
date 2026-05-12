@@ -33,6 +33,8 @@ fetch("http://localhost:3000/api/usuario", {
 
 // GET /api/usuario          — devuelve todos los usuarios
 // GET /api/usuario?nombre=X — devuelve el usuario con ese nombre
+
+
 export async function GET(request) {
   const supabase = await createClient();
   const url = new URL(request.url);

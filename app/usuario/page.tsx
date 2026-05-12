@@ -106,6 +106,29 @@ const loginCss = `
     pointer-events: none;
     animation: ring-breathe 5s ease-in-out infinite;
   }
+
+  .social-btn-dark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.11);
+    border-radius: 14px;
+    padding: 13px 24px;
+    color: rgba(255,255,255,0.75);
+    font-size: 0.88rem;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    box-sizing: border-box;
+  }
+  .social-btn-dark:hover {
+    background: rgba(255,255,255,0.09);
+    border-color: rgba(255,255,255,0.22);
+    transform: translateY(-2px);
+  }
 `;
 
 function VinylDeco({
@@ -171,13 +194,13 @@ const EQ_BARS = Array.from({ length: 22 }, (_, i) => ({
 
 const MUSIC_NOTES = ["♪", "♫", "♩", "♬", "♭", "♮"];
 
-export default function LoginPage() {
+export default function LoginPage() { //declaramos todos los estados y herramientas que necesita el login
   const [email, setEmail]               = useState("");
   const [password, setPassword]         = useState("");
-  const [mounted, setMounted]           = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [serverError, setServerError]   = useState("");
-  const [resetSent, setResetSent]       = useState(false);
+  const [mounted, setMounted]           = useState(false); //para controlar la animación de entrada del card y evitar que se ejecute en el servidor
+  const [loading, setLoading]           = useState(false); //para deshabilitar el botón de loginmientras se carga el inicio de sesión
+  const [serverError, setServerError]   = useState(""); //para mostrar errores del servidor
+  const [resetSent, setResetSent]       = useState(false);// recuperación de cuenta
   const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
 
@@ -569,6 +592,45 @@ export default function LoginPage() {
             {loading ? "Entrando…" : "Entrar →"}
           </button>
         </form>
+
+        {/* Divisor */}
+        <div style={{
+          position: "relative", textAlign: "center",
+          margin: "24px 0 18px",
+          animation: mounted ? "fade-up 0.6s ease 0.55s both" : "none",
+        }}>
+          <span style={{
+            position: "relative", zIndex: 1, padding: "0 14px",
+            color: "rgba(255,255,255,0.22)", fontSize: "0.72rem",
+            fontFamily: "Arial, sans-serif", letterSpacing: "1.5px",
+            background: "radial-gradient(ellipse at center, rgba(10,12,22,0.9) 60%, transparent 100%)",
+          }}>
+            O INICIA SESIÓN CON
+          </span>
+          <div style={{
+            position: "absolute", top: "50%", left: 0, right: 0,
+            height: "1px", background: "rgba(255,255,255,0.08)", zIndex: 0,
+          }} />
+        </div>
+
+        {/* Google */}
+        <div style={{ animation: mounted ? "fade-up 0.6s ease 0.65s both" : "none" }}>
+          <button type="button" className="social-btn-dark" onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: { redirectTo: `${window.location.origin}/auth/callback` },
+            });
+          }}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="18" height="18">
+              <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917"/>
+              <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691"/>
+              <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.9 11.9 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44"/>
+              <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917"/>
+            </svg>
+            Google
+          </button>
+        </div>
 
         {/* Register */}
         <p

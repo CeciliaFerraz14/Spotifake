@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUser, faEnvelope, faLock, faTriangleExclamation, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 const css = `
   @keyframes fade-in-up {
@@ -90,10 +93,13 @@ const css = `
   .msg-err { color: #ff6b6b; font-size: 0.78rem; font-family: Arial, sans-serif; margin-top: 8px; }
 `;
 
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon: IconDefinition; children: React.ReactNode }) {
   return (
     <div className="cfg-card">
-      <h2 className="cfg-section-title"><span>{icon}</span> {title}</h2>
+      <h2 className="cfg-section-title">
+        <FontAwesomeIcon icon={icon} style={{ width: "1em", height: "1em" }} />
+        {title}
+      </h2>
       {children}
     </div>
   );
@@ -109,8 +115,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Feedback({ ok, err }: { ok?: string; err?: string }) {
-  if (ok)  return <p className="msg-ok">✓ {ok}</p>;
-  if (err) return <p className="msg-err">✕ {err}</p>;
+  if (ok)  return <p className="msg-ok"><FontAwesomeIcon icon={faCheck} style={{ marginRight: 5 }} /> {ok}</p>;
+  if (err) return <p className="msg-err"><FontAwesomeIcon icon={faXmark} style={{ marginRight: 5 }} /> {err}</p>;
   return null;
 }
 
@@ -254,7 +260,7 @@ export default function ConfiguracionPage() {
 
         {/* ── Perfil ── */}
         <div style={{ animation: mounted ? "fade-in-up 0.5s ease 0.05s both" : "none" }}>
-          <Section title="Perfil" icon="👤">
+          <Section title="Perfil" icon={faUser}>
             {/* Avatar */}
             <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "22px" }}>
               {avatarUrl
@@ -294,7 +300,7 @@ export default function ConfiguracionPage() {
 
         {/* ── Cuenta ── */}
         <div style={{ animation: mounted ? "fade-in-up 0.5s ease 0.1s both" : "none" }}>
-          <Section title="Cuenta" icon="✉️">
+          <Section title="Cuenta" icon={faEnvelope}>
             <Field label="Correo electrónico">
               <input className="cfg-input" type="email" value={email} onChange={e => setEmail(e.target.value)} />
             </Field>
@@ -307,7 +313,7 @@ export default function ConfiguracionPage() {
 
         {/* ── Contraseña ── */}
         <div style={{ animation: mounted ? "fade-in-up 0.5s ease 0.15s both" : "none" }}>
-          <Section title="Contraseña" icon="🔒">
+          <Section title="Contraseña" icon={faLock}>
             <Field label="Nueva contraseña">
               <input className="cfg-input" type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Mínimo 6 caracteres" />
             </Field>
@@ -325,7 +331,7 @@ export default function ConfiguracionPage() {
         <div style={{ animation: mounted ? "fade-in-up 0.5s ease 0.25s both" : "none" }}>
           <div className="cfg-card" style={{ borderColor: "rgba(255,60,60,0.2)" }}>
             <h2 className="cfg-section-title" style={{ color: "#ff6b6b" }}>
-              <span>⚠️</span> Zona de peligro
+              <FontAwesomeIcon icon={faTriangleExclamation} style={{ width: "1em", height: "1em" }} /> Zona de peligro
               <span style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, rgba(255,60,60,0.25), transparent)", display: "block" }} />
             </h2>
             <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.82rem", fontFamily: "Arial, sans-serif", marginBottom: "16px", lineHeight: 1.6 }}>
