@@ -15,7 +15,7 @@ const sections = [
   },
   {
     title: "Tus derechos",
-    content: "Podés acceder, modificar o eliminar tu cuenta y datos en cualquier momento desde la sección de Configuración. Si tenés alguna consulta, contactanos a través de nuestra página.",
+    content: "Se puede acceder, modificar o eliminar tu cuenta y datos en cualquier momento desde la sección de Configuración. Si tiene alguna consulta, contactanos a través de nuestra página.",
   },
   {
     title: "Cookies",
