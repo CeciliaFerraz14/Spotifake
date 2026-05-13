@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('canciones')
-      .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk')
+      .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk, audio_url')
       .eq('id_album_fk', album_id)
       .order('id_cancion', { ascending: true });
 
@@ -43,6 +43,7 @@ export async function GET(request: Request) {
       num_reproducciones: c.num_reproducciones,
       artista: artista?.nombre ?? '',
       caratula,
+      audio_url: c.audio_url ?? null,
     })));
   }
 
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
     // 2. Canciones de esos álbumes
     const { data, error } = await supabase
       .from('canciones')
-      .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk')
+      .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk, audio_url')
       .in('id_album_fk', albumIds)
       .order('num_reproducciones', { ascending: false });
 
@@ -79,6 +80,7 @@ export async function GET(request: Request) {
         duracion: c.duracion,
         num_reproducciones: c.num_reproducciones,
         caratula,
+        audio_url: c.audio_url ?? null,
       };
     }));
   }
@@ -86,7 +88,7 @@ export async function GET(request: Request) {
   // Canciones con nombre del artista (top o mix)
   let cancionesQuery = supabase
     .from('canciones')
-    .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk');
+    .select('id_cancion, titulo, duracion, num_reproducciones, id_album_fk, audio_url');
 
   if (top) {
     cancionesQuery = cancionesQuery.order('num_reproducciones', { ascending: false }).limit(Number(top));
@@ -128,6 +130,7 @@ export async function GET(request: Request) {
       num_reproducciones: c.num_reproducciones,
       artista: artistaMap[album?.id_artista_fk] ?? '',
       caratula,
+      audio_url: c.audio_url ?? null,
     };
   }));
 }

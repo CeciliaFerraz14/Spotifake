@@ -401,7 +401,7 @@ type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; col
 
 type UserPlaylist = { id: string; nombre: string; accent: string; bg: string; canciones?: number };
 type Artista = { nombre: string; genero: string; id_artista?: string; id?: string; imagen?: string };
-type CancionDB = { id: string; titulo: string; duracion: number; num_reproducciones: number; artista: string };
+type CancionDB = { id: string; titulo: string; duracion: number; num_reproducciones: number; artista: string; audio_url?: string | null };
 type AlbumDB   = { id: string; titulo: string; año: string; canciones: number; caratula?: string; artista: string; artista_id: string };
 
 export default function InicioPage() {
@@ -610,8 +610,8 @@ export default function InicioPage() {
   };
 
   const firstName  = user?.name?.split(" ")[0] ?? "";
-  const mixTracks: Track[] = mixCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion }));
-  const topTracks: Track[] = topCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion }));
+  const mixTracks: Track[] = mixCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion, audioUrl: c.audio_url ?? undefined }));
+  const topTracks: Track[] = topCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion, audioUrl: c.audio_url ?? undefined }));
 
   return (
     <div style={{

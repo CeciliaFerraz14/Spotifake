@@ -13,7 +13,7 @@ function fmtDuracion(seg: number) {
 }
 
 type Artista  = { nombre: string; genero: string; descripcion?: string; id?: string; imagen?: string };
-type Cancion  = { id: string; titulo: string; duracion: number; num_reproducciones: number; caratula?: string };
+type Cancion  = { id: string; titulo: string; duracion: number; num_reproducciones: number; caratula?: string; audio_url?: string | null };
 type Album    = { id: string; titulo: string; año: string; canciones: number; caratula?: string };
 type Playlist = { id: string; nombre: string; accent: string };
 
@@ -314,7 +314,7 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
             {canciones.map((c, i) => {
               const isActive = currentTrack?.title === c.titulo && currentTrack?.artist === artista?.nombre;
               const queue = canciones.map(s => ({
-                title: s.titulo, artist: artista?.nombre ?? "", duration: s.duracion, icon: s.caratula,
+                title: s.titulo, artist: artista?.nombre ?? "", duration: s.duracion, icon: s.caratula, audioUrl: s.audio_url ?? undefined,
               }));
               const track = queue[i];
               return (
