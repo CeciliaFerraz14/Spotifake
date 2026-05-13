@@ -2,6 +2,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePlayer } from "@/app/context/PlayerContext";
+import { SkeletonStyles, SkeletonBox, SkeletonTrackRow, SkeletonAlbumCard } from "@/app/components/Skeleton";
 
 const toSlug = (name: string) =>
   name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "-");
@@ -203,8 +204,29 @@ export default function ArtistaPage({ params }: { params: Promise<{ id: string }
   };
 
   if (loading) return (
-    <div style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", marginTop: "80px", fontFamily: "var(--font-nunito)" }}>
-      Cargando…
+    <div style={{ maxWidth: "700px", margin: "60px auto", padding: "0 20px", display: "flex", flexDirection: "column", gap: "28px" }}>
+      <SkeletonStyles />
+      {/* Cabecera artista */}
+      <div style={{ display: "flex", alignItems: "center", gap: "24px", padding: "28px", background: "rgba(255,255,255,0.03)", borderRadius: "20px" }}>
+        <SkeletonBox width="96px" height="96px" radius="50%" />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+          <SkeletonBox width="50%" height="22px" />
+          <SkeletonBox width="30%" height="13px" />
+          <SkeletonBox width="20%" height="11px" />
+        </div>
+      </div>
+      {/* Canciones */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+        <SkeletonBox width="120px" height="18px" style={{ marginBottom: "12px" }} />
+        {Array.from({ length: 5 }).map((_, i) => <SkeletonTrackRow key={i} />)}
+      </div>
+      {/* Álbumes */}
+      <div>
+        <SkeletonBox width="100px" height="18px" style={{ marginBottom: "16px" }} />
+        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+          {Array.from({ length: 3 }).map((_, i) => <SkeletonAlbumCard key={i} />)}
+        </div>
+      </div>
     </div>
   );
 

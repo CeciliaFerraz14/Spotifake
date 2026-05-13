@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SkeletonStyles, SkeletonAlbumCard } from "@/app/components/Skeleton";
 
 const toSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
@@ -32,7 +33,12 @@ export default function DiscosPage() {
         </h2>
 
         {loading ? (
-          <p style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-nunito), sans-serif" }}>Cargando…</p>
+          <>
+            <SkeletonStyles />
+            <div className="flex flex-row flex-wrap gap-8 items-start">
+              {Array.from({ length: 8 }).map((_, i) => <SkeletonAlbumCard key={i} />)}
+            </div>
+          </>
         ) : (
           <div className="flex flex-row flex-wrap gap-8 items-start">
             {albums.map((album, i) => {
