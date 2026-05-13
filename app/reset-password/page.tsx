@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
   const mismatch = confirm && password !== confirm;
   const canSubmit = password.length >= 6 && password === confirm && !loading;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
