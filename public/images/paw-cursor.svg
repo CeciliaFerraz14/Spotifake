@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Almohadilla central -->
+  <ellipse cx="16" cy="20" rx="7" ry="6" fill="#7d5a50"/>
+  <!-- Dedo arriba izquierda -->
+  <ellipse cx="9" cy="13" rx="3" ry="3.5" fill="#7d5a50"/>
+  <!-- Dedo arriba centro -->
+  <ellipse cx="16" cy="11" rx="3" ry="3.5" fill="#7d5a50"/>
+  <!-- Dedo arriba derecha -->
+  <ellipse cx="23" cy="13" rx="3" ry="3.5" fill="#7d5a50"/>
+  <!-- Dedo pequeño izquierda -->
+  <ellipse cx="5" cy="17" rx="2.2" ry="2.8" fill="#7d5a50"/>
+  <!-- Dedo pequeño derecha -->
+  <ellipse cx="27" cy="17" rx="2.2" ry="2.8" fill="#7d5a50"/>
+</svg>

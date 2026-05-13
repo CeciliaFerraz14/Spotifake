@@ -106,4 +106,30 @@ body {
   text-decoration: underline;
 }
 
+/* ── Paw cursor: cualquier elemento interactivo ── */
+button, a, label[for], select, summary,
+input[type="submit"], input[type="button"], input[type="reset"],
+input[type="checkbox"], input[type="radio"], input[type="file"], input[type="range"],
+[role="button"], [role="link"], [role="menuitem"], [role="tab"],
+[role="checkbox"], [role="radio"], [role="switch"], [role="option"], [role="combobox"],
+[tabindex]:not([tabindex="-1"]),
+.album-card, .artist-link, .pl-card, .rv-card,
+.cfg-btn-primary, .cfg-btn-danger, .nav-enter-btn,
+.dash-card, .wave-card, .glow-pulse-card,
+.hover-card, .hit-row,
+.cursor-pointer {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='20' rx='7' ry='6' fill='%237d5a50'/%3E%3Cellipse cx='9' cy='13' rx='3' ry='3.5' fill='%237d5a50'/%3E%3Cellipse cx='16' cy='11' rx='3' ry='3.5' fill='%237d5a50'/%3E%3Cellipse cx='23' cy='13' rx='3' ry='3.5' fill='%237d5a50'/%3E%3Cellipse cx='5' cy='17' rx='2.2' ry='2.8' fill='%237d5a50'/%3E%3Cellipse cx='27' cy='17' rx='2.2' ry='2.8' fill='%237d5a50'/%3E%3C/svg%3E") 16 16, pointer !important;
+}
+
+/* Hijos de elementos interactivos (evita que el cursor cambie al pasar por texto/iconos internos) */
+button *, a *, [role="button"] *, [role="link"] *, [role="menuitem"] *, [role="tab"] *,
+[tabindex]:not([tabindex="-1"]) *,
+.album-card *, .artist-link *, .pl-card *, .rv-card *,
+.cfg-btn-primary *, .cfg-btn-danger *, .nav-enter-btn *,
+.dash-card *, .wave-card *, .glow-pulse-card *,
+.hover-card *, .hit-row *,
+.cursor-pointer * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='20' rx='7' ry='6' fill='%237d5a50'/%3E%3Cellipse cx='9' cy='13' rx='3' ry='3.5' fill='%237d5a50'/%3E%3Cellipse cx='16' cy='11' rx='3' ry='3.5' fill='%237d5a50'/%3E%3Cellipse cx='23' cy='13' rx='3' ry='3.5' fill='%237d5a50'/%3E%3Cellipse cx='5' cy='17' rx='2.2' ry='2.8' fill='%237d5a50'/%3E%3Cellipse cx='27' cy='17' rx='2.2' ry='2.8' fill='%237d5a50'/%3E%3C/svg%3E") 16 16, pointer !important;
+}
+
 
