@@ -146,8 +146,9 @@ export default function MusicPlayer() {
   const [creatingNew, setCreatingNew] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const volRef      = useRef<HTMLDivElement>(null);
+  const progressRef  = useRef<HTMLDivElement>(null);
+  const volRef       = useRef<HTMLDivElement>(null);
+  const volDragging  = useRef(false);
 
   useEffect(() => {
     fetch('/api/likes').then(r => r.ok ? r.json() : []).then((data: any[]) => {
@@ -234,11 +235,23 @@ export default function MusicPlayer() {
     seek(Math.max(0, Math.min(100, pct)));
   };
 
-  const handleVolClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const applyVolFromX = (clientX: number) => {
     const rect = volRef.current!.getBoundingClientRect();
-    const pct  = ((e.clientX - rect.left) / rect.width) * 100;
+    const pct  = ((clientX - rect.left) / rect.width) * 100;
     setVolume(Math.round(Math.max(0, Math.min(100, pct))));
     setMuted(false);
+  };
+
+  const handleVolClick = (e: React.MouseEvent<HTMLDivElement>) => applyVolFromX(e.clientX);
+
+  const handleVolMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    volDragging.current = true;
+    applyVolFromX(e.clientX);
+
+    const onMove = (ev: MouseEvent) => { if (volDragging.current) applyVolFromX(ev.clientX); };
+    const onUp   = () => { volDragging.current = false; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   const displayVol = muted ? 0 : volume;
@@ -382,7 +395,7 @@ export default function MusicPlayer() {
               }
             </button>
             {/* Slider de volumen */}
-            <div className="vol-track" ref={volRef} onClick={handleVolClick}>
+            <div className="vol-track" ref={volRef} onClick={handleVolClick} onMouseDown={handleVolMouseDown}>
               <div className="vol-fill" style={{ width: `${displayVol}%` }} />
             </div>
           </div>

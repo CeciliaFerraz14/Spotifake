@@ -74,6 +74,7 @@ export default function Footer() {
   return (
     <footer style={{
       background: "radial-gradient(ellipse at 50% 0%, #0d1a2e 0%, #05080f 100%)",
+      paddingBottom: "72px",
     }}>
       <style>{footerCss}</style>
       <div className="footer-grad-border" />
@@ -179,12 +180,12 @@ export default function Footer() {
         textAlign: "center",
       }}>
         <p style={{
-          color: "rgba(255,255,255,0.18)",
+          color: "rgba(255,255,255,0.5)",
           fontSize: "0.74rem",
           fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
           margin: 0,
         }}>
-          © 2025 SpotiFake · Ceci, Jess &amp; Isa · Todos los derechos reservados
+          © 2026 SpotiFake · Ceci, Jess &amp; Isa · Todos los derechos reservados
         </p>
       </div>
     </footer>
