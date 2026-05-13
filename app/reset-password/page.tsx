@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
   const mismatch = confirm && password !== confirm;
   const canSubmit = password.length >= 6 && password === confirm && !loading;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);

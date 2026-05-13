@@ -13,7 +13,7 @@ const COLOR_OPTIONS = [
   { accent: "#ff6ef7", bg: "linear-gradient(145deg,#1a0020,#35003a)" },
   { accent: "#ff9a00", bg: "linear-gradient(145deg,#1a0800,#3a1800)" },
 ];
-type DbCancion  = { id: string; titulo: string; artista: string; accent?: string; duracion?: number; position: number };
+type DbCancion  = { id: string; titulo: string; artista: string; accent?: string; duracion?: number; position: number; audio_url?: string };
 
 /* ── Estrellas: dos capas, muchas y densas ── */
 const STAR_COLORS = ["#ffffff","#ffffff","#ffffff","#ffffffdd","#1CF09466","#5eead455","#a3ff4744","#6e2fff55","#cc88ff66","#aaddff55","#ffffff88"];
@@ -415,7 +415,7 @@ export default function PlaylistDetailPage() {
     })();
   }, [playlistId]);
 
-  const tracks = canciones.map(c => ({ title: c.titulo, artist: c.artista, accent: c.accent, duration: c.duracion }));
+  const tracks = canciones.map(c => ({ title: c.titulo, artist: c.artista, accent: c.accent, duration: c.duracion, audioUrl: c.audio_url }));
   const totalDuration = canciones.reduce((acc, c) => acc + (c.duracion ?? 0), 0);
   const accent = playlist?.accent ?? "#1CF094";
 

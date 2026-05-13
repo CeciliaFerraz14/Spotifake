@@ -150,7 +150,7 @@ const css = `
   }
 `;
 
-type LikedSong = { id: string; titulo: string; artista: string; accent?: string; duracion?: number };
+type LikedSong = { id: string; titulo: string; artista: string; accent?: string; duracion?: number; audio_url?: string };
 
 function fmt(s: number) {
   const m = Math.floor(s / 60);
@@ -205,7 +205,7 @@ export default function LikedPage() {
   };
 
   const asTracks = (): Track[] => songs.map(s => ({
-    title: s.titulo, artist: s.artista, accent: s.accent, duration: s.duracion,
+    title: s.titulo, artist: s.artista, accent: s.accent, duration: s.duracion, audioUrl: s.audio_url,
   }));
 
   if (cargando) return (
@@ -381,7 +381,7 @@ export default function LikedPage() {
                 <span style={{ fontSize: "0.85rem" }}>Pulsa el corazón en una canción para añadirla aquí.</span>
               </div>
             ) : songs.map((s, i) => {
-              const track: Track = { title: s.titulo, artist: s.artista, accent: s.accent, duration: s.duracion };
+              const track: Track = { title: s.titulo, artist: s.artista, accent: s.accent, duration: s.duracion, audioUrl: s.audio_url };
               const isActive = currentTrack?.title === s.titulo && currentTrack?.artist === s.artista;
               return (
                 <div key={s.id} className={`track-row${isActive ? " active" : ""}`} onClick={() => playTrack(track, asTracks())}>

@@ -172,7 +172,7 @@ export default function MusicPlayer() {
     const res = await fetch(`/api/playlists/${playlistId}/canciones`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration }),
+      body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration, audio_url: track.audioUrl }),
     });
     setAddModal(false);
     const pl = playlists.find(p => p.id === playlistId);
@@ -220,7 +220,7 @@ export default function MusicPlayer() {
       await fetch('/api/likes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration }),
+        body: JSON.stringify({ titulo: track.title, artista: track.artist, accent: track.accent, duracion: track.duration, audio_url: track.audioUrl }),
       });
       setLikedSet(prev => new Set(prev).add(key));
     }
