@@ -166,9 +166,9 @@ export default function Footer() {
         {/* Legal */}
         <div>
           <p className="footer-col-title">Legal</p>
-          <a href="#" className="footer-link">Privacidad</a>
-          <a href="#" className="footer-link">Términos de uso</a>
-          <a href="#" className="footer-link">Cookies</a>
+          <Link href="/privacidad" className="footer-link">Privacidad</Link>
+          <Link href="/terminos" className="footer-link">Términos de uso</Link>
+          <Link href="/cookies" className="footer-link">Cookies</Link>
         </div>
 
       </div>
