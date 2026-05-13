@@ -285,6 +285,34 @@ const css = `
   }
 `;
 
+function PlaylistName({ name, accent }: { name: string; accent: string }) {
+  const emojiRegex = /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu;
+  const parts: { text: string; isEmoji: boolean }[] = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = emojiRegex.exec(name)) !== null) {
+    if (match.index > lastIndex) parts.push({ text: name.slice(lastIndex, match.index), isEmoji: false });
+    parts.push({ text: match[0], isEmoji: true });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < name.length) parts.push({ text: name.slice(lastIndex), isEmoji: false });
+  const gradStyle = {
+    background: `linear-gradient(90deg, #fff 0%, ${accent} 140%)`,
+    WebkitBackgroundClip: "text" as const,
+    WebkitTextFillColor: "transparent" as const,
+    backgroundClip: "text" as const,
+  };
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.isEmoji
+          ? <span key={i} style={{ WebkitTextFillColor: "initial", backgroundClip: "unset" }}>{p.text}</span>
+          : <span key={i} style={gradStyle}>{p.text}</span>
+      )}
+    </>
+  );
+}
+
 function fmt(s: number) {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
@@ -632,11 +660,9 @@ export default function PlaylistDetailPage() {
                 fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
                 fontWeight: 900,
                 fontSize: "clamp(1.8rem, 5vw, 2.8rem)",
-                background: `linear-gradient(90deg, #fff 0%, ${accent} 140%)`,
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
                 lineHeight: 1.1,
               }}>
-                {playlist.nombre}
+                <PlaylistName name={playlist.nombre} accent={accent} />
               </h1>
               <p style={{
                 color: "rgba(255,255,255,0.3)", fontSize: "0.8rem",
