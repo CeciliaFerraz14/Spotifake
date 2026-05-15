@@ -84,15 +84,6 @@ const playerCss = `
     pointer-events: none;
     transition: width 0.9s linear;
   }
-  .progress-thumb {
-    position: absolute; top: 50%; right: -6px;
-    transform: translateY(-50%);
-    width: 12px; height: 12px; border-radius: 50%;
-    background: white; opacity: 0;
-    transition: opacity 0.2s;
-    pointer-events: none;
-  }
-  .progress-track:hover .progress-thumb { opacity: 1; }
 
   .vol-track {
     width: 80px; height: 4px; border-radius: 4px;
@@ -149,6 +140,8 @@ export default function MusicPlayer() {
   const progressRef  = useRef<HTMLDivElement>(null);
   const volRef       = useRef<HTMLDivElement>(null);
   const volDragging  = useRef(false);
+  const progDragging = useRef(false);
+  const [dragProgress, setDragProgress] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/likes').then(r => r.ok ? r.json() : []).then((data: any[]) => {
@@ -226,13 +219,32 @@ export default function MusicPlayer() {
     }
   };
 
-  const accent   = track?.accent   ?? "#1CF094";
-  const duration = track?.duration ?? 210;
+  const accent          = track?.accent   ?? "#1CF094";
+  const duration        = track?.duration ?? 210;
+  const displayProgress = dragProgress ?? progress;
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const applyProgressFromX = (clientX: number) => {
     const rect = progressRef.current!.getBoundingClientRect();
-    const pct  = ((e.clientX - rect.left) / rect.width) * 100;
-    seek(Math.max(0, Math.min(100, pct)));
+    return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+  };
+
+  const handleProgressMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    progDragging.current = true;
+    setDragProgress(applyProgressFromX(e.clientX));
+
+    const onMove = (ev: MouseEvent) => {
+      if (progDragging.current) setDragProgress(applyProgressFromX(ev.clientX));
+    };
+    const onUp = (ev: MouseEvent) => {
+      progDragging.current = false;
+      seek(applyProgressFromX(ev.clientX));
+      setDragProgress(null);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   const applyVolFromX = (clientX: number) => {
@@ -372,10 +384,18 @@ export default function MusicPlayer() {
               <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.65rem", fontFamily: "Arial, sans-serif", minWidth: "30px", textAlign: "right" }}>
                 {fmt(elapsed)}
               </span>
-              <div className="progress-track" ref={progressRef} onClick={handleProgressClick}>
-                <div className="progress-fill" style={{ width: `${progress}%` }}>
-                  <div className="progress-thumb" />
-                </div>
+              <div
+                className="progress-track"
+                ref={progressRef}
+                onMouseDown={handleProgressMouseDown}
+              >
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${displayProgress}%`,
+                    transition: dragProgress !== null ? "none" : "width 0.9s linear",
+                  }}
+                />
               </div>
               <span style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.65rem", fontFamily: "Arial, sans-serif", minWidth: "30px" }}>
                 {fmt(duration)}

@@ -507,7 +507,7 @@ export default function Navbar() {
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <Link href={loggedIn ? "/inicio" : "/"} className={`nav-link${pathname === "/inicio" || pathname === "/" ? " nav-link--active" : ""}`}>Inicio</Link>
             {!loggedIn && (
-              <Link href="/faq" className={`nav-link${pathname === "/faq" ? " nav-link--active" : ""}`}>FAQ</Link>
+              <Link href="/#faq" className="nav-link">FAQ</Link>
             )}
             {loggedIn && (
               <Link href="/playlists" className={`nav-link${pathname === "/playlists" ? " nav-link--active" : ""}`}>Playlists</Link>

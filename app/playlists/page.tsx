@@ -553,13 +553,70 @@ export default function PlaylistsPage() {
     setCtxMenu({ x, y: r.bottom + 6, playlist: pl });
   };
 
-  if (cargando) {
-    return (
-      <div style={{ color: "white", textAlign: "center", marginTop: "100px", fontFamily: "var(--font-nunito), sans-serif" }}>
-        Cargando...
+  if (cargando) return (
+    <div style={{
+      minHeight: "100vh",
+      background: "radial-gradient(ellipse at 50% 0%, #0e1a2e 0%, #060910 60%, #000 100%)",
+    }}>
+      <style>{css + `
+        @keyframes sk-shimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        .sk {
+          border-radius: 8px;
+          background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+          background-size: 600px 100%;
+          animation: sk-shimmer 1.6s ease-in-out infinite;
+        }
+      `}</style>
+
+      {Array.from({ length: 50 }).map((_, i) => (
+        <div key={i} style={{
+          position: "fixed",
+          width: i % 6 === 0 ? "2px" : "1px", height: i % 6 === 0 ? "2px" : "1px",
+          borderRadius: "50%", background: "white",
+          opacity: 0.08 + ((i * 37) % 40) / 100,
+          top: `${(i * 37 + 13) % 100}%`, left: `${(i * 53 + 7) % 100}%`,
+          pointerEvents: "none", zIndex: 0,
+        }} />
+      ))}
+
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "36px 24px 120px", position: "relative", zIndex: 1 }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "40px", flexWrap: "wrap", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+            <div className="sk" style={{ width: 56, height: 56, borderRadius: "50%" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="sk" style={{ width: 80, height: 11 }} />
+              <div className="sk" style={{ width: 140, height: 26, borderRadius: 10 }} />
+              <div className="sk" style={{ width: 155, height: 11 }} />
+            </div>
+          </div>
+          <div className="sk" style={{ width: 148, height: 40, borderRadius: 50 }} />
+        </div>
+
+        {/* Section title */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div className="sk" style={{ width: 85, height: 18, borderRadius: 6 }} />
+          <div className="sk" style={{ width: 80, height: 22, borderRadius: 50 }} />
+          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
+        </div>
+
+        {/* Card grid */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, padding: "4px 2px 16px" }}>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="sk" style={{
+              flex: "1 1 160px", minWidth: "150px", maxWidth: "220px",
+              height: 175, borderRadius: 16,
+            }} />
+          ))}
+        </div>
+
       </div>
-    );
-  }
+    </div>
+  );
 
   const nombre    = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || "Usuario";
   const firstName = nombre.split(" ")[0];

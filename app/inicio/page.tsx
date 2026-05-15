@@ -261,7 +261,7 @@ const css = `
       opacity 0.3s ease;
   }
   .hover-card {
-    border-radius: 18px; overflow: hidden;
+    border-radius: 18px;
     transition: border-color 0.25s, box-shadow 0.25s;
     cursor: pointer;
   }
@@ -399,7 +399,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 type SparkItem = { id: number; x: number; y: number; dx: number; dy: number; color: string; size: number };
 
-type UserPlaylist = { id: string; nombre: string; accent: string; bg: string; canciones?: number };
+type UserPlaylist = { id: string; nombre: string; accent: string; bg: string; canciones?: number; image_url?: string | null };
 type Artista = { nombre: string; genero: string; id_artista?: string; id?: string; imagen?: string };
 type CancionDB = { id: string; titulo: string; duracion: number; num_reproducciones: number; artista: string; audio_url?: string | null };
 type AlbumDB   = { id: string; titulo: string; año: string; canciones: number; caratula?: string; artista: string; artista_id: string };
@@ -410,13 +410,6 @@ export default function InicioPage() {
   const [greeting, setGreeting]       = useState("Bienvenido");
   const [mounted, setMounted]         = useState(false);
   const [sparkMap, setSparkMap]       = useState<Record<string, SparkItem[]>>({});
-  const [expandedSection, setExpandedSection] = useState<'mix' | 'hits' | null>(null);
-  const [overlayPhase, setOverlayPhase] = useState<'closed' | 'from' | 'open'>('closed');
-  const [cardRect, setCardRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
-  const leaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const openTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mixCardRef  = useRef<HTMLDivElement>(null);
-  const hitsCardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const [likedSet, setLikedSet]         = useState<Set<string>>(new Set());
@@ -425,6 +418,7 @@ export default function InicioPage() {
   const [mixCanciones, setMixCanciones] = useState<CancionDB[]>([]);
   const [topCanciones, setTopCanciones] = useState<CancionDB[]>([]);
   const [albums, setAlbums]             = useState<AlbumDB[]>([]);
+  const [cargando, setCargando]         = useState(true);
   const [addModal, setAddModal]         = useState<Track | null>(null);
   const [addFeedback, setAddFeedback]   = useState<string | null>(null);
   const [activeAlbum, setActiveAlbum]   = useState(-1);
@@ -434,29 +428,6 @@ export default function InicioPage() {
   const [nuevoNombre, setNuevoNombre]   = useState("");
   const [colorIdx, setColorIdx]         = useState(0);
   const CAROUSEL_VISIBLE = 5;
-
-  const enterSection = (which: 'mix' | 'hits') => {
-    if (leaveTimer.current) clearTimeout(leaveTimer.current);
-    if (openTimer.current)  clearTimeout(openTimer.current);
-    openTimer.current = setTimeout(() => {
-      const ref = which === 'mix' ? mixCardRef : hitsCardRef;
-      const r = ref.current?.getBoundingClientRect();
-      if (!r) return;
-      setCardRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-      setExpandedSection(which);
-      setOverlayPhase('from');
-      requestAnimationFrame(() => requestAnimationFrame(() => setOverlayPhase('open')));
-    }, 80);
-  };
-  const leaveSection = () => {
-    if (openTimer.current) clearTimeout(openTimer.current);
-    setOverlayPhase('from');
-    leaveTimer.current = setTimeout(() => {
-      setExpandedSection(null);
-      setOverlayPhase('closed');
-      setCardRect(null);
-    }, 480);
-  };
 
   const spawnSparks = (key: string, e: React.MouseEvent<HTMLDivElement>, accent: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -526,6 +497,7 @@ export default function InicioPage() {
         console.log("Albums recibidos:", data.map((a: any) => ({ titulo: a.titulo, caratula: a.caratula })));
         if (Array.isArray(data)) setAlbums(data);
       }
+      setCargando(false);
     })();
   }, []);
 
@@ -608,6 +580,102 @@ export default function InicioPage() {
     setTimeout(() => setAddFeedback(null), 2500);
     cerrarCrear();
   };
+
+  if (cargando) return (
+    <div style={{
+      minHeight: "100vh",
+      background: "radial-gradient(ellipse at 50% 0%, #0e1a2e 0%, #060910 60%, #000 100%)",
+    }}>
+      <style>{css + `
+        @keyframes sk-shimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        .sk {
+          border-radius: 8px;
+          background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+          background-size: 600px 100%;
+          animation: sk-shimmer 1.6s ease-in-out infinite;
+        }
+      `}</style>
+
+      {Array.from({ length: 50 }).map((_, i) => (
+        <div key={i} style={{
+          position: "fixed",
+          width: i % 6 === 0 ? "2px" : "1px", height: i % 6 === 0 ? "2px" : "1px",
+          borderRadius: "50%", background: "white",
+          opacity: 0.08 + ((i * 37) % 40) / 100,
+          top: `${(i * 37 + 13) % 100}%`, left: `${(i * 53 + 7) % 100}%`,
+          pointerEvents: "none", zIndex: 0,
+        }} />
+      ))}
+
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "36px 24px 64px", position: "relative", zIndex: 1 }}>
+
+        {/* User header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "40px", flexWrap: "wrap", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+            <div className="sk" style={{ width: 56, height: 56, borderRadius: "50%" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="sk" style={{ width: 80, height: 11 }} />
+              <div className="sk" style={{ width: 160, height: 28, borderRadius: 10 }} />
+              <div className="sk" style={{ width: 150, height: 11 }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div className="sk" style={{ width: 44, height: 32, borderRadius: 6 }} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <div className="sk" style={{ width: 84, height: 52, borderRadius: 12 }} />
+              <div className="sk" style={{ width: 84, height: 52, borderRadius: 12 }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Artistas */}
+        <div style={{ marginBottom: "44px" }}>
+          <div className="sk" style={{ width: 72, height: 18, borderRadius: 6, marginBottom: 16 }} />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="sk" style={{ flex: "1 1 140px", minWidth: "130px", maxWidth: "200px", height: 148, borderRadius: 16 }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Mis Playlists */}
+        <div style={{ marginBottom: "44px" }}>
+          <div className="sk" style={{ width: 110, height: 18, borderRadius: 6, marginBottom: 16 }} />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="sk" style={{ flex: "1 1 160px", minWidth: "150px", maxWidth: "220px", height: 175, borderRadius: 16 }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Mix semanal + Hits del momento */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: "44px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="sk" style={{ width: 100, height: 18, borderRadius: 6 }} />
+            <div className="sk" style={{ height: 310, borderRadius: 18 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="sk" style={{ width: 130, height: 18, borderRadius: 6 }} />
+            <div className="sk" style={{ height: 310, borderRadius: 18 }} />
+          </div>
+        </div>
+
+        {/* Nuevos lanzamientos */}
+        <div>
+          <div className="sk" style={{ width: 160, height: 18, borderRadius: 6, marginBottom: 16 }} />
+          <div style={{ display: "flex", gap: 14 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="sk" style={{ flex: "1 1 0", height: 165, borderRadius: 16 }} />
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
 
   const firstName  = user?.name?.split(" ")[0] ?? "";
   const mixTracks: Track[] = mixCanciones.map((c, i) => ({ title: c.titulo, artist: c.artista, accent: ACCENTS[i % ACCENTS.length], duration: c.duracion, audioUrl: c.audio_url ?? undefined }));
@@ -817,7 +885,10 @@ export default function InicioPage() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     position: "relative", overflow: "hidden",
                   }}>
-                    <Vinyl accent={pl.accent} size={64} />
+                    {pl.image_url
+                      ? <img src={pl.image_url} alt={pl.nombre} style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
+                      : <Vinyl accent={pl.accent} size={64} />
+                    }
                     <div style={{ position: "absolute", bottom: "8px", right: "10px", zIndex: 1 }}>
                       <button className="play-btn" onClick={e => e.stopPropagation()}><PlayIcon /></button>
                     </div>
@@ -838,11 +909,6 @@ export default function InicioPage() {
           </div>
         </section>
 
-        {/* ── Backdrop para sección expandida ── */}
-        {expandedSection && (
-          <div className="panel-backdrop" onClick={leaveSection} />
-        )}
-
         {/* ── Mix semanal + Hits del momento ── */}
         <div className="mix-hits-grid" style={{
           marginBottom: "44px",
@@ -853,15 +919,12 @@ export default function InicioPage() {
           <section>
             <SectionTitle>Mix semanal</SectionTitle>
             <div
-              ref={mixCardRef}
               className="hover-card"
               style={{
                 marginTop: "16px",
                 background: "linear-gradient(145deg, rgba(28,240,148,0.07) 0%, rgba(94,234,212,0.04) 100%)",
                 border: "1px solid rgba(28,240,148,0.12)",
               }}
-              onMouseEnter={() => enterSection('mix')}
-              onMouseLeave={leaveSection}
             >
               {/* Banner del mix */}
               <div style={{
@@ -869,6 +932,7 @@ export default function InicioPage() {
                 background: "linear-gradient(90deg, rgba(28,240,148,0.12), rgba(163,255,71,0.06))",
                 borderBottom: "1px solid rgba(255,255,255,0.05)",
                 display: "flex", alignItems: "center", gap: "14px",
+                borderRadius: "18px 18px 0 0", overflow: "hidden",
               }}>
                 <img src="/images/mixsemanal.jpg" alt="Mix semanal" style={{
                   width: "44px", height: "44px", borderRadius: "12px",
@@ -923,21 +987,19 @@ export default function InicioPage() {
           <section>
             <SectionTitle>Hits del momento</SectionTitle>
             <div
-              ref={hitsCardRef}
               className="hover-card"
               style={{
                 marginTop: "16px",
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(255,255,255,0.07)",
               }}
-              onMouseEnter={() => enterSection('hits')}
-              onMouseLeave={leaveSection}
             >
               <div style={{
                 padding: "18px 20px",
                 background: "linear-gradient(90deg, rgba(255,100,80,0.08), rgba(255,80,120,0.04))",
                 borderBottom: "1px solid rgba(255,255,255,0.05)",
                 display: "flex", alignItems: "center", gap: "14px",
+                borderRadius: "18px 18px 0 0", overflow: "hidden",
               }}>
                 <img src="/images/hitsdelmomento.jpg" alt="Hits del momento" style={{
                   width: "44px", height: "44px", borderRadius: "12px",
@@ -1112,107 +1174,6 @@ export default function InicioPage() {
         </section>
 
       </div>
-
-      {/* ── Panel expandido ── */}
-      {expandedSection && cardRect && (
-        <div
-          className="panel-overlay"
-          style={{
-            top:    overlayPhase === 'open' ? cardRect.top  + cardRect.height * 0.5 - cardRect.height * 0.65 : cardRect.top,
-            left:   overlayPhase === 'open' ? cardRect.left + cardRect.width  * 0.5 - cardRect.width  * 0.65 : cardRect.left,
-            width:  overlayPhase === 'open' ? cardRect.width  * 1.3 : cardRect.width,
-            height: overlayPhase === 'open' ? cardRect.height * 1.3 : cardRect.height,
-            borderRadius: overlayPhase === 'open' ? "24px" : "18px",
-            opacity: overlayPhase === 'from' && cardRect ? 0.6 : 1,
-            background: expandedSection === 'mix'
-              ? "linear-gradient(145deg, #0c1810 0%, #08121a 100%)"
-              : "linear-gradient(145deg, #18090f 0%, #120814 100%)",
-            border: expandedSection === 'mix'
-              ? "1px solid rgba(28,240,148,0.22)"
-              : "1px solid rgba(255,110,247,0.18)",
-            display: "flex", flexDirection: "column",
-          }}
-          onMouseEnter={() => enterSection(expandedSection)}
-          onMouseLeave={leaveSection}
-        >
-          {/* Banner */}
-          <div style={{
-            padding: "18px 20px",
-            background: expandedSection === 'mix'
-              ? "linear-gradient(90deg, rgba(28,240,148,0.14), rgba(163,255,71,0.06))"
-              : "linear-gradient(90deg, rgba(255,100,80,0.1), rgba(255,80,120,0.05))",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            display: "flex", alignItems: "center", gap: "14px",
-          }}>
-            <div style={{
-              width: "44px", height: "44px", borderRadius: "12px",
-            }}><img
-              src={expandedSection === 'mix' ? "/images/mixsemanal.jpg" : "/images/hitsdelmomento.jpg"}
-              alt={expandedSection === 'mix' ? "Mix semanal" : "Hits del momento"}
-              style={{ width: "44px", height: "44px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }}
-            /></div>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: "white", fontWeight: 800, fontSize: "0.95rem", fontFamily: "var(--font-nunito), sans-serif" }}>
-                {expandedSection === 'mix' ? 'Tu mix de la semana' : 'Top canciones globales'}
-              </div>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif" }}>
-                {expandedSection === 'mix' ? 'Basado en tus gustos' : 'Actualizado hoy'}
-              </div>
-            </div>
-            <div className="nota-rain">
-              {(expandedSection === 'mix' ? MIX_NOTES : HITS_NOTES).map((n, i) => (
-                <span key={i} className="nota" style={{
-                  ["--left" as string]: n.left, ["--color" as string]: n.color,
-                  ["--dur" as string]: n.dur,   ["--del" as string]: n.del,
-                  ["--size" as string]: n.size,
-                } as React.CSSProperties}>{n.char}</span>
-              ))}
-            </div>
-          </div>
-          {/* Lista */}
-          <div className={`panel-scroll${expandedSection === 'hits' ? ' hits-scroll' : ''}`} style={{ flex: 1, maxHeight: "none" }}>
-            {expandedSection === 'mix'
-              ? mixTracks.map((track, i) => (
-                  <div key={i} className="hit-row" onClick={() => playTrack(track, mixTracks)}>
-                    <div style={{
-                      width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
-                      background: `hsl(${(i * 60 + 140) % 360}, 70%, 25%)`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "0.8rem", color: "rgba(255,255,255,0.7)",
-                      fontFamily: "var(--font-nunito), sans-serif", fontWeight: 700,
-                    }}>{i + 1}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
-                    </div>
-                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{fmtDur(track.duration ?? 0)}</div>
-                    <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
-                    <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
-                    <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
-                  </div>
-                ))
-              : topTracks.map((track, i) => (
-                  <div key={i} className="hit-row" onClick={() => playTrack(track, topTracks)}>
-                    <div style={{
-                      width: "22px", textAlign: "center", flexShrink: 0,
-                      color: i === 0 ? "#1CF094" : "rgba(255,255,255,0.35)",
-                      fontWeight: 800, fontSize: "0.82rem",
-                      fontFamily: "var(--font-nunito), sans-serif",
-                    }}>{i + 1}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: "white", fontSize: "0.82rem", fontWeight: 600, fontFamily: "var(--font-nunito), sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</div>
-                      <div style={{ color: "rgba(255,255,255,0.38)", fontSize: "0.7rem", fontFamily: "Arial, sans-serif" }}><Link href={`/artistas/${toSlug(track.artist)}`} className="artist-link" onClick={e => e.stopPropagation()}>{track.artist}</Link></div>
-                    </div>
-                    <div style={{ color: "rgba(255,255,255,0.28)", fontSize: "0.72rem", fontFamily: "Arial, sans-serif", flexShrink: 0 }}>{fmtDur(track.duration ?? 0)}</div>
-                    <button onClick={e => toggleLike(track, e)} style={{ background: "none", border: "none", cursor: "pointer", color: likedSet.has(`${track.title}|${track.artist}`) ? "#ff5078" : "rgba(255,255,255,0.25)", fontSize: "0.9rem", padding: "2px 4px", flexShrink: 0, transition: "color 0.15s" }}>♥</button>
-                    <button onClick={e => { e.stopPropagation(); setAddModal(track); }} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", fontSize: "1.1rem", padding: "2px 4px", flexShrink: 0, lineHeight: 1, transition: "color 0.15s" }} onMouseEnter={e => (e.currentTarget.style.color = "#1CF094")} onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.25)"; }}>+</button>
-                    <button className="play-btn" style={{ width: "30px", height: "30px" }}><PlayIcon /></button>
-                  </div>
-                ))
-            }
-          </div>
-        </div>
-      )}
 
       {/* Modal: añadir a playlist */}
       {addModal && (

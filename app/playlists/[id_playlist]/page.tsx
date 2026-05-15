@@ -553,8 +553,72 @@ export default function PlaylistDetailPage() {
   };
 
   if (cargando) return (
-    <div style={{ color: "white", textAlign: "center", marginTop: "100px", fontFamily: "var(--font-nunito), sans-serif" }}>
-      Cargando...
+    <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      <style>{css}{`
+        @keyframes sk-shimmer {
+          0%   { background-position: -600px 0; }
+          100% { background-position:  600px 0; }
+        }
+        .sk {
+          border-radius: 8px;
+          background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+          background-size: 600px 100%;
+          animation: sk-shimmer 1.6s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Fondo base idéntico al real */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, background: "radial-gradient(ellipse at 40% 60%, #1a0a3a 0%, #0d0a2a 35%, #06080f 70%, #020305 100%)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "linear-gradient(-22deg, transparent 10%, rgba(110,47,255,0.13) 25%, rgba(80,60,200,0.18) 38%, rgba(28,240,148,0.07) 50%, rgba(110,47,255,0.13) 62%, transparent 78%)", filter: "blur(22px)" }} />
+
+      <div style={{ position: "relative", zIndex: 1, maxWidth: "900px", margin: "0 auto", padding: "32px 24px 140px" }}>
+
+        {/* Botón volver skeleton */}
+        <div style={{ marginBottom: "28px" }}>
+          <div className="sk" style={{ width: 130, height: 36, borderRadius: 50 }} />
+        </div>
+
+        {/* Panel cabecera skeleton */}
+        <div className="glass-panel" style={{ padding: "32px", marginBottom: "16px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "32px", flexWrap: "wrap" }}>
+            {/* Portada */}
+            <div className="sk" style={{ width: 200, height: 200, borderRadius: 16, flexShrink: 0 }} />
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 180, paddingBottom: 4, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="sk" style={{ width: 70, height: 11 }} />
+              <div className="sk" style={{ width: "70%", height: 36, borderRadius: 10 }} />
+              <div className="sk" style={{ width: 120, height: 11, marginBottom: 16 }} />
+              <div style={{ display: "flex", gap: 12 }}>
+                <div className="sk" style={{ width: 148, height: 44, borderRadius: 50 }} />
+                <div className="sk" style={{ width: 120, height: 44, borderRadius: 50 }} />
+                <div className="sk" style={{ width: 42, height: 42, borderRadius: "50%" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Panel lista skeleton */}
+        <div className="glass-panel" style={{ padding: "14px 20px 20px" }}>
+          {/* Cabecera columnas */}
+          <div style={{ borderBottom: "1px solid rgba(28,240,148,0.12)", paddingBottom: 10, marginBottom: 10 }}>
+            <div className="sk" style={{ width: 180, height: 10 }} />
+          </div>
+          {/* 5 filas de canción */}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "36px 1fr auto auto auto", alignItems: "center", gap: 14, padding: "10px 0" }}>
+              <div className="sk" style={{ width: 20, height: 14, borderRadius: 4, justifySelf: "center" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div className="sk" style={{ width: `${55 + (i * 11) % 30}%`, height: 13, borderRadius: 4 }} />
+                <div className="sk" style={{ width: `${30 + (i * 7) % 20}%`, height: 10, borderRadius: 4 }} />
+              </div>
+              <div className="sk" style={{ width: 32, height: 11, borderRadius: 4 }} />
+              <div className="sk" style={{ width: 18, height: 18, borderRadius: "50%" }} />
+              <div className="sk" style={{ width: 16, height: 16, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+
+      </div>
     </div>
   );
 

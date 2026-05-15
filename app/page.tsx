@@ -1023,7 +1023,198 @@ function ReviewsSection() {
   );
 }
 
+const faqData = [
+  {
+    question: "¿Qué es SpotiFake?",
+    answer: "SpotiFake es una plataforma de streaming de música inspirada en Spotify, desarrollada como proyecto educativo. Permite explorar artistas, álbumes, canciones y crear listas de reproducción personalizadas, todo con un diseño fresco y amigable.",
+  },
+  {
+    question: "¿Necesito una cuenta para escuchar música?",
+    answer: "Puedes navegar por el catálogo sin registrarte, pero para disfrutar de funciones como guardar canciones en favoritos, crear listas de reproducción o acceder a tu perfil, necesitarás crear una cuenta gratuita. El registro es rápido y sencillo.",
+  },
+  {
+    question: "¿Cómo creo una lista de reproducción?",
+    answer: "Una vez que hayas iniciado sesión, ve a la sección «Playlists» desde el menú de navegación y haz clic en «Nueva playlist». Ponle un nombre, añade una portada si quieres y empieza a agregar canciones desde cualquier álbum o artista.",
+  },
+  {
+    question: "¿Cómo añado canciones a mis favoritos?",
+    answer: "En cualquier canción del reproductor o del listado de un álbum verás un icono de corazón. Dale clic para guardarla en tus «Me gusta». Puedes acceder a todas tus canciones favoritas desde la sección «Liked Songs» dentro de Playlists.",
+  },
+  {
+    question: "¿Puedo cambiar mi foto de perfil o mi nombre?",
+    answer: "Sí. Entra en tu perfil haciendo clic en tu avatar en la barra de navegación y selecciona «Configuración». Desde allí podrás actualizar tu nombre y subir una nueva foto de perfil.",
+  },
+  {
+    question: "He olvidado mi contraseña, ¿qué hago?",
+    answer: "En la página de inicio de sesión encontrarás el enlace «¿Has olvidado tu contraseña?». Introduce tu correo electrónico y te enviaremos un enlace para restablecerla. Comprueba también la carpeta de spam por si acaso.",
+  },
+  {
+    question: "¿Por qué algunas canciones no se reproducen correctamente?",
+    answer: "SpotiFake es un proyecto en desarrollo, por lo que algunos archivos de audio pueden no estar disponibles todavía. Si tienes problemas de reproducción, prueba a refrescar la página o comprueba tu conexión a Internet.",
+  },
+];
+
+function FaqSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); io.disconnect(); }
+    }, { threshold: 0.1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div
+      id="faq"
+      ref={sectionRef}
+      style={{
+        background: "#060910",
+        position: "relative",
+        overflow: "hidden",
+        padding: "100px 24px 110px",
+      }}
+    >
+      {/* Glow superior */}
+      <div style={{
+        position: "absolute", top: 0, left: "50%",
+        transform: "translateX(-50%)",
+        width: "800px", height: "400px",
+        background: "radial-gradient(ellipse at center top, rgba(28,240,148,0.07) 0%, transparent 65%)",
+        pointerEvents: "none",
+      }} />
+
+      {/* Header */}
+      <div style={{
+        textAlign: "center", maxWidth: 680, margin: "0 auto 64px",
+        position: "relative", zIndex: 2,
+        opacity: visible ? 1 : 0,
+        transform: visible ? "none" : "translateY(30px)",
+        transition: "opacity 0.8s ease, transform 0.8s ease",
+      }}>
+        <p style={{
+          color: "#1CF094",
+          fontFamily: "var(--font-anton),'Anton',sans-serif",
+          letterSpacing: "5px", fontSize: ".75rem",
+          margin: "0 0 14px", textTransform: "uppercase",
+        }}>
+          Preguntas frecuentes
+        </p>
+        <h2 style={{
+          fontFamily: "var(--font-anton),'Anton',sans-serif",
+          fontSize: "clamp(3rem,7vw,5.5rem)",
+          color: "#fff", margin: "0 0 20px",
+          letterSpacing: "2px", lineHeight: 1.05,
+        }}>
+          ¿TIENES ALGUNA
+        </h2>
+        <h2 style={{
+          fontFamily: "var(--font-anton),'Anton',sans-serif",
+          fontSize: "clamp(3rem,7vw,5.5rem)",
+          margin: "0 0 24px",
+          letterSpacing: "2px", lineHeight: 1.05,
+          background: "linear-gradient(90deg, #1CF094 0%, #a3ff47 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        }}>
+          DUDA?
+        </h2>
+        <div style={{
+          height: "2px", width: "60px",
+          background: "linear-gradient(90deg, #1CF094, #a3ff47)",
+          margin: "0 auto",
+          boxShadow: "0 0 14px rgba(28,240,148,0.5)",
+        }} />
+      </div>
+
+      {/* Acordeón */}
+      <div style={{
+        maxWidth: 720, margin: "0 auto",
+        position: "relative", zIndex: 2,
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.8s ease 0.25s",
+      }}>
+        {faqData.map((faq, i) => {
+          const isOpen = openIndex === i;
+          return (
+            <div
+              key={i}
+              onClick={() => setOpenIndex(isOpen ? null : i)}
+              style={{
+                background: isOpen ? "rgba(28,240,148,0.05)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${isOpen ? "rgba(28,240,148,0.25)" : "rgba(255,255,255,0.07)"}`,
+                borderRadius: 14,
+                marginBottom: 10,
+                cursor: "pointer",
+                transition: "background 0.25s, border-color 0.25s",
+                overflow: "hidden",
+              }}
+            >
+              {/* Pregunta */}
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "20px 24px",
+                gap: 16,
+              }}>
+                <span style={{
+                  color: isOpen ? "#1CF094" : "white",
+                  fontFamily: "var(--font-nunito),'Trebuchet MS',sans-serif",
+                  fontWeight: 700, fontSize: "0.95rem",
+                  transition: "color 0.2s",
+                  lineHeight: 1.4,
+                }}>
+                  {faq.question}
+                </span>
+                <svg
+                  width="18" height="18" viewBox="0 0 18 18" fill="none"
+                  style={{
+                    flexShrink: 0,
+                    transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.35s ease",
+                  }}
+                >
+                  <path d="m4.5 7.2 3.793 3.793a1 1 0 0 0 1.414 0L13.5 7.2"
+                    stroke={isOpen ? "#1CF094" : "rgba(255,255,255,0.4)"}
+                    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+
+              {/* Respuesta */}
+              <div style={{
+                maxHeight: isOpen ? "300px" : "0px",
+                overflow: "hidden",
+                transition: "max-height 0.4s cubic-bezier(0.4,0,0.2,1)",
+              }}>
+                <p style={{
+                  margin: 0,
+                  padding: "0 24px 22px",
+                  color: "rgba(255,255,255,0.5)",
+                  fontFamily: "Arial, sans-serif",
+                  fontSize: "0.875rem",
+                  lineHeight: 1.7,
+                }}>
+                  {faq.answer}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function IntroPage() {
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const router = useRouter();
   const mouseRef  = useRef({ x: -9999, y: -9999 });
   const coverRefs = useRef<(HTMLDivElement | null)[]>([]);
   const velRef    = useRef<{ x: number; y: number }[]>(
@@ -1033,6 +1224,12 @@ export default function IntroPage() {
     allImages.map(() => ({ x: 0, y: 0 }))
   );
   const rafRef    = useRef<number | null>(null);
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      setLoggedIn(!!user);
+    });
+  }, []);
 
   const tick = useCallback(() => {
     const { x: mx, y: my } = mouseRef.current;
@@ -1186,9 +1383,13 @@ export default function IntroPage() {
                 Tu música. Tu mundo.
               </p>
             </div>
-            <Link href="/inicio" className="enter-btn">
+            <button
+              className="enter-btn"
+              onClick={() => loggedIn ? router.push("/inicio") : setShowRegisterModal(true)}
+              style={{ border: "none", cursor: "pointer" }}
+            >
               Explorar →
-            </Link>
+            </button>
           </div>
 
         </div>
@@ -1214,7 +1415,6 @@ export default function IntroPage() {
             zIndex: 20,
           }}
         >
-          <span style={{ textTransform: "uppercase" }}>for listeners</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14M5 12l7 7 7-7"/>
           </svg>
@@ -1224,6 +1424,140 @@ export default function IntroPage() {
       <VinylSection />
       <PlaylistCarouselSection />
       <ReviewsSection />
+      <FaqSection />
+
+      {/* Modal: registro requerido */}
+      {showRegisterModal && (
+        <div
+          onClick={() => setShowRegisterModal(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9000,
+            background: "rgba(0,4,12,0.82)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: "modal-backdrop-in 0.25s ease both",
+          }}
+        >
+          <style>{`
+            @keyframes modal-backdrop-in {
+              from { opacity: 0; }
+              to   { opacity: 1; }
+            }
+            @keyframes modal-box-in {
+              from { opacity: 0; transform: scale(0.88) translateY(24px); }
+              to   { opacity: 1; transform: scale(1)    translateY(0); }
+            }
+          `}</style>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(145deg, #0a1628 0%, #060910 100%)",
+              border: "1px solid rgba(28,240,148,0.22)",
+              borderRadius: "24px",
+              padding: "40px 36px 36px",
+              width: "100%", maxWidth: "420px",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.05), 0 0 60px rgba(28,240,148,0.08)",
+              animation: "modal-box-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both",
+              position: "relative",
+            }}
+          >
+            {/* Botón cerrar */}
+            <button
+              onClick={() => setShowRegisterModal(false)}
+              style={{
+                position: "absolute", top: 16, right: 16,
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "50%", width: 32, height: 32,
+                color: "rgba(255,255,255,0.5)", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1rem", lineHeight: 1,
+                transition: "background 0.15s, color 0.15s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; (e.currentTarget as HTMLButtonElement).style.color = "white"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)"; }}
+            >×</button>
+
+            {/* Icono */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: "50%",
+                background: "linear-gradient(135deg, rgba(28,240,148,0.15), rgba(28,240,148,0.05))",
+                border: "1px solid rgba(28,240,148,0.3)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 0 32px rgba(28,240,148,0.15)",
+              }}>
+                <img src="/images/hojita.png" alt="" style={{ width: 44, height: 44, objectFit: "contain" }} />
+              </div>
+            </div>
+
+            {/* Texto */}
+            <h2 style={{
+              margin: "0 0 10px",
+              fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
+              fontWeight: 900, fontSize: "1.4rem",
+              color: "white", textAlign: "center", letterSpacing: "-0.3px",
+            }}>
+              ¡Únete a SpotiFake!
+            </h2>
+            <p style={{
+              margin: "0 0 28px",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: "0.88rem",
+              fontFamily: "Arial, sans-serif",
+              textAlign: "center",
+              lineHeight: 1.6,
+            }}>
+              Necesitas una cuenta para explorar el catálogo,<br />
+              escuchar música y crear tus playlists.
+            </p>
+
+            {/* Botones */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Link
+                href="/usuario"
+                onClick={() => setShowRegisterModal(false)}
+                style={{
+                  display: "block", textAlign: "center",
+                  background: "linear-gradient(135deg, #1CF094 0%, #5eead4 50%, #a3ff47 100%)",
+                  backgroundSize: "200% auto",
+                  color: "#061210",
+                  fontFamily: "var(--font-nunito), sans-serif",
+                  fontWeight: 900, fontSize: "0.95rem",
+                  padding: "13px 0", borderRadius: "50px",
+                  textDecoration: "none",
+                  boxShadow: "0 4px 24px rgba(28,240,148,0.4)",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px) scale(1.02)"; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 8px 36px rgba(28,240,148,0.6)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = ""; (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 4px 24px rgba(28,240,148,0.4)"; }}
+              >
+                Registrarse gratis
+              </Link>
+              <Link
+                href="/usuario"
+                onClick={() => setShowRegisterModal(false)}
+                style={{
+                  display: "block", textAlign: "center",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "rgba(255,255,255,0.75)",
+                  fontFamily: "var(--font-nunito), sans-serif",
+                  fontWeight: 700, fontSize: "0.88rem",
+                  padding: "12px 0", borderRadius: "50px",
+                  textDecoration: "none",
+                  transition: "background 0.2s, border-color 0.2s, color 0.2s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.25)"; (e.currentTarget as HTMLAnchorElement).style.color = "white"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.12)"; (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.75)"; }}
+              >
+                Ya tengo cuenta — Iniciar sesión
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

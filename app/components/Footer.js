@@ -171,6 +171,26 @@ export default function Footer() {
           <Link href="/cookies" className="footer-link">Cookies</Link>
         </div>
 
+        {/* Contacto */}
+        <div>
+          <p className="footer-col-title">Contacto</p>
+          <p style={{
+            color: "rgba(255,255,255,0.3)",
+            fontSize: "0.78rem",
+            fontFamily: "var(--font-nunito), 'Trebuchet MS', sans-serif",
+            margin: "0 0 8px",
+          }}>
+            Dpto. de desarrolladoras
+          </p>
+          <a href="mailto:soporteSpotifake@cij.com" className="footer-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+            soporteSpotifake@cij.com
+          </a>
+        </div>
+
       </div>
 
       {/* Copyright */}
